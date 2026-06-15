@@ -4,11 +4,12 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { environment } from "./shared/config/environment";
+import { buildContainer, type ApplicationContainer } from "./shared/container";
 import { errorHandler } from "./shared/http/middlewares/error-handler.middleware";
 import { notFoundHandler } from "./shared/http/middlewares/not-found.middleware";
 import { healthRouter } from "./shared/http/routes/health.routes";
 
-export function createApp(): Express {
+export function createApp(container: ApplicationContainer = buildContainer()): Express {
   const app = express();
 
   app.use(helmet());
@@ -26,9 +27,10 @@ export function createApp(): Express {
   }
 
   app.use(`${environment.apiPrefix}/health`, healthRouter);
+  app.use(`${environment.apiPrefix}/auth`, container.routes.auth);
+  app.use(`${environment.apiPrefix}/workspaces`, container.routes.workspace);
   app.use(notFoundHandler);
   app.use(errorHandler);
 
   return app;
 }
-
