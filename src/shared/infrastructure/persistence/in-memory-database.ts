@@ -5,6 +5,7 @@ import type { AuditLog } from "../../../features/audit/domain/audit-log.entity";
 import type { User } from "../../../features/auth/domain/user.entity";
 import type { EmailMessage } from "../../../features/emails/domain/email-message.entity";
 import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail-account.entity";
+import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { AutomationRule } from "../../../features/rules/domain/automation-rule.entity";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
 import type { Workspace } from "../../../features/workspace/domain/workspace.entity";
@@ -13,6 +14,7 @@ export interface InMemoryDatabase {
   users: User[];
   workspaces: Workspace[];
   gmailAccounts: GmailAccount[];
+  gmailOAuthTokens: GmailOAuthToken[];
   emails: EmailMessage[];
   alerts: Alert[];
   senders: SenderProfile[];
@@ -92,6 +94,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         createdAt: "2026-06-05T14:45:00.000Z",
       },
     ],
+    gmailOAuthTokens: [],
     emails: [
       {
         id: securityEmailId,
@@ -506,4 +509,3 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
     ],
   };
 }
-

@@ -4,6 +4,7 @@ import type { AuditLogRepository, AuditQueryParams } from "../../../features/aud
 import type { UserRepository } from "../../../features/auth/domain/user.repository";
 import type { EmailQueryParams, EmailMessageRepository } from "../../../features/emails/domain/email-message.repository";
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
+import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfileRepository, SenderQueryParams } from "../../../features/senders/domain/sender-profile.repository";
 import type { WorkspaceRepository } from "../../../features/workspace/domain/workspace.repository";
@@ -113,6 +114,39 @@ export class InMemoryGmailAccountRepository implements GmailAccountRepository {
       (currentAccount) => currentAccount.id !== id,
     );
     return this.database.gmailAccounts.length !== initialLength;
+  }
+}
+
+export class InMemoryGmailOAuthTokenRepository implements GmailOAuthTokenRepository {
+  public constructor(private readonly database: InMemoryDatabase) {}
+
+  public async upsert(token: Parameters<GmailOAuthTokenRepository["upsert"]>[0]) {
+    const index = this.database.gmailOAuthTokens.findIndex(
+      (currentToken) => currentToken.gmailAccountId === token.gmailAccountId,
+    );
+
+    if (index === -1) {
+      this.database.gmailOAuthTokens.push(clone(token));
+      return clone(token);
+    }
+
+    this.database.gmailOAuthTokens[index] = clone(token);
+    return clone(token);
+  }
+
+  public async findByAccountId(gmailAccountId: string) {
+    const token = this.database.gmailOAuthTokens.find(
+      (currentToken) => currentToken.gmailAccountId === gmailAccountId,
+    );
+    return token ? clone(token) : null;
+  }
+
+  public async deleteByAccountId(gmailAccountId: string) {
+    const initialLength = this.database.gmailOAuthTokens.length;
+    this.database.gmailOAuthTokens = this.database.gmailOAuthTokens.filter(
+      (currentToken) => currentToken.gmailAccountId !== gmailAccountId,
+    );
+    return this.database.gmailOAuthTokens.length !== initialLength;
   }
 }
 
@@ -343,4 +377,3 @@ export class InMemoryAuditLogRepository implements AuditLogRepository {
     return paginate(clone(logs), params);
   }
 }
-
