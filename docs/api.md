@@ -77,6 +77,10 @@ Inicia OAuth. Si `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` estan configurados,
 
 Consulta estado final conocido del flujo OAuth.
 
+### GET /api/gmail/oauth/callback
+
+Callback configurado para Google OAuth. Recibe `code`, `state` o `error`, registra auditoria si el `state` identifica workspace y redirige al frontend con `oauth=success` u `oauth=error`.
+
 ### POST /api/gmail/accounts/:id/sync
 
 Solicita sincronizacion manual.
@@ -185,4 +189,3 @@ Query params:
 - `userId`
 - `dateFrom`
 - `dateTo`
-

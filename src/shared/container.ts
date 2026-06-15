@@ -25,6 +25,7 @@ import { EmailController } from "../features/emails/presentation/http/email.cont
 import { createEmailRouter } from "../features/emails/presentation/http/email.routes";
 import { DisconnectGmailAccountUseCase } from "../features/gmail-accounts/application/disconnect-gmail-account.use-case";
 import { GetGmailOAuthStatusUseCase } from "../features/gmail-accounts/application/get-gmail-oauth-status.use-case";
+import { HandleGmailOAuthCallbackUseCase } from "../features/gmail-accounts/application/handle-gmail-oauth-callback.use-case";
 import { ListGmailAccountsUseCase } from "../features/gmail-accounts/application/list-gmail-accounts.use-case";
 import { ReconnectGmailAccountUseCase } from "../features/gmail-accounts/application/reconnect-gmail-account.use-case";
 import { StartGmailOAuthUseCase } from "../features/gmail-accounts/application/start-gmail-oauth.use-case";
@@ -114,6 +115,7 @@ export function buildContainer(): ApplicationContainer {
     new ListGmailAccountsUseCase(gmailAccounts),
     new StartGmailOAuthUseCase(auditLogs),
     new GetGmailOAuthStatusUseCase(),
+    new HandleGmailOAuthCallbackUseCase(auditLogs),
     new SyncGmailAccountUseCase(gmailAccounts, auditLogs),
     new ReconnectGmailAccountUseCase(gmailAccounts, auditLogs),
     new DisconnectGmailAccountUseCase(gmailAccounts, auditLogs),

@@ -47,6 +47,13 @@ describe("Auto-Gmail-code API", () => {
     expect(oauth.status).toBe(201);
     expect(oauth.body.data.authUrl).toEqual(expect.any(String));
     expect(JSON.stringify(oauth.body).toLowerCase()).not.toContain("password");
+
+    const callback = await request(app).get(
+      `/api/gmail/oauth/callback?code=demo-code&state=${oauth.body.data.state as string}`,
+    );
+
+    expect(callback.status).toBe(302);
+    expect(callback.headers.location).toContain("oauth=success");
   });
 
   it("lista correos filtrados y corrige clasificacion manualmente", async () => {
@@ -123,4 +130,3 @@ describe("Auto-Gmail-code API", () => {
     expect(summary.body.data.totalEmails).toBeGreaterThan(0);
   });
 });
-

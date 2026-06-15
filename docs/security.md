@@ -30,8 +30,8 @@ Si faltan credenciales, devuelve una URL demo para desarrollo. Esto permite prob
 
 - Persistir usuarios, workspaces y auditoria en base de datos real.
 - Guardar tokens Gmail cifrados solo en backend.
-- Implementar callback OAuth con intercambio de codigo por tokens.
+- Completar el adaptador de intercambio de codigo OAuth por tokens y perfil Gmail.
+- Firmar y verificar criptograficamente el parametro `state` OAuth.
 - Configurar rotacion de secretos.
 - Agregar rate limiting por IP y usuario.
 - Configurar cookies httpOnly si se decide usar sesion basada en cookies.
-

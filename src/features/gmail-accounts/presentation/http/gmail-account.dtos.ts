@@ -9,3 +9,8 @@ export const oauthStatusQueryDto = z.object({
   error: z.string().optional(),
 });
 
+export const oauthCallbackQueryDto = z.object({
+  code: z.string().optional(),
+  state: z.string().optional(),
+  error: z.string().optional(),
+});
