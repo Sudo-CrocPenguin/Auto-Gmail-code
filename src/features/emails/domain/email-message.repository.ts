@@ -24,7 +24,13 @@ export interface EmailQueryParams extends PaginationParams {
 }
 
 export interface EmailMessageRepository {
+  upsertByGmailMessageId(email: EmailMessage): Promise<{ email: EmailMessage; created: boolean }>;
   findById(id: string): Promise<EmailMessage | null>;
+  findByGmailMessageId(
+    workspaceId: string,
+    gmailAccountId: string,
+    gmailMessageId: string,
+  ): Promise<EmailMessage | null>;
   findByWorkspace(params: EmailQueryParams): Promise<PaginatedResult<EmailMessage>>;
   update(id: string, data: Partial<EmailMessage>): Promise<EmailMessage | null>;
 }

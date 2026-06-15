@@ -8,7 +8,9 @@ export interface SenderQueryParams extends PaginationParams {
 }
 
 export interface SenderProfileRepository {
+  create(sender: SenderProfile): Promise<SenderProfile>;
   findById(id: string): Promise<SenderProfile | null>;
+  findByEmail(workspaceId: string, email: string): Promise<SenderProfile | null>;
   findByWorkspace(params: SenderQueryParams): Promise<PaginatedResult<SenderProfile>>;
   update(id: string, data: Partial<SenderProfile>): Promise<SenderProfile | null>;
 }

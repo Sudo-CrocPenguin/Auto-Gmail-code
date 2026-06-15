@@ -9,6 +9,7 @@ export interface AlertQueryParams extends PaginationParams {
 }
 
 export interface AlertRepository {
+  create(alert: Alert): Promise<Alert>;
   findById(id: string): Promise<Alert | null>;
   findByWorkspace(params: AlertQueryParams): Promise<PaginatedResult<Alert>>;
   update(id: string, data: Partial<Alert>): Promise<Alert | null>;

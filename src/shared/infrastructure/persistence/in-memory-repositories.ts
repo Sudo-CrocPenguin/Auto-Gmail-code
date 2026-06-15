@@ -153,8 +153,48 @@ export class InMemoryGmailOAuthTokenRepository implements GmailOAuthTokenReposit
 export class InMemoryEmailMessageRepository implements EmailMessageRepository {
   public constructor(private readonly database: InMemoryDatabase) {}
 
+  public async upsertByGmailMessageId(email: Parameters<EmailMessageRepository["upsertByGmailMessageId"]>[0]) {
+    const index = this.database.emails.findIndex(
+      (currentEmail) =>
+        currentEmail.workspaceId === email.workspaceId &&
+        currentEmail.gmailAccountId === email.gmailAccountId &&
+        currentEmail.gmailMessageId === email.gmailMessageId,
+    );
+
+    if (index === -1) {
+      this.database.emails.push(clone(email));
+      return { email: clone(email), created: true };
+    }
+
+    const existingEmail = this.database.emails[index];
+    if (!existingEmail) {
+      this.database.emails.push(clone(email));
+      return { email: clone(email), created: true };
+    }
+    const updatedEmail = {
+      ...email,
+      id: existingEmail.id,
+      classification: existingEmail.classification ?? email.classification,
+      reviewedAt: existingEmail.reviewedAt,
+      actionHistory: existingEmail.actionHistory.length > 0 ? existingEmail.actionHistory : email.actionHistory,
+    };
+    this.database.emails[index] = clone(updatedEmail);
+
+    return { email: clone(updatedEmail), created: false };
+  }
+
   public async findById(id: string) {
     const email = this.database.emails.find((currentEmail) => currentEmail.id === id);
+    return email ? clone(email) : null;
+  }
+
+  public async findByGmailMessageId(workspaceId: string, gmailAccountId: string, gmailMessageId: string) {
+    const email = this.database.emails.find(
+      (currentEmail) =>
+        currentEmail.workspaceId === workspaceId &&
+        currentEmail.gmailAccountId === gmailAccountId &&
+        currentEmail.gmailMessageId === gmailMessageId,
+    );
     return email ? clone(email) : null;
   }
 
@@ -234,6 +274,11 @@ export class InMemoryEmailMessageRepository implements EmailMessageRepository {
 export class InMemoryAlertRepository implements AlertRepository {
   public constructor(private readonly database: InMemoryDatabase) {}
 
+  public async create(alert: Parameters<AlertRepository["create"]>[0]) {
+    this.database.alerts.push(clone(alert));
+    return clone(alert);
+  }
+
   public async findById(id: string) {
     const alert = this.database.alerts.find((currentAlert) => currentAlert.id === id);
     return alert ? clone(alert) : null;
@@ -267,8 +312,22 @@ export class InMemoryAlertRepository implements AlertRepository {
 export class InMemorySenderProfileRepository implements SenderProfileRepository {
   public constructor(private readonly database: InMemoryDatabase) {}
 
+  public async create(sender: Parameters<SenderProfileRepository["create"]>[0]) {
+    this.database.senders.push(clone(sender));
+    return clone(sender);
+  }
+
   public async findById(id: string) {
     const sender = this.database.senders.find((currentSender) => currentSender.id === id);
+    return sender ? clone(sender) : null;
+  }
+
+  public async findByEmail(workspaceId: string, email: string) {
+    const sender = this.database.senders.find(
+      (currentSender) =>
+        currentSender.workspaceId === workspaceId &&
+        currentSender.email.toLowerCase() === email.toLowerCase(),
+    );
     return sender ? clone(sender) : null;
   }
 
