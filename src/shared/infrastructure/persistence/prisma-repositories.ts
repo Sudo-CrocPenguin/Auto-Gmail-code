@@ -19,6 +19,8 @@ import type { AutomationRule, RuleAction, RuleCondition } from "../../../feature
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
 import type { SenderProfileRepository, SenderQueryParams } from "../../../features/senders/domain/sender-profile.repository";
+import { defaultWorkspaceSettings, type WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
+import type { WorkspaceSettingsRepository } from "../../../features/settings/domain/workspace-settings.repository";
 import type { Workspace } from "../../../features/workspace/domain/workspace.entity";
 import type { WorkspaceRepository } from "../../../features/workspace/domain/workspace.repository";
 
@@ -252,6 +254,29 @@ export class PrismaWorkspaceRepository implements WorkspaceRepository {
       .update({ where: { id }, data })
       .catch(() => null);
     return workspace ? mapWorkspace(workspace) : null;
+  }
+}
+
+export class PrismaWorkspaceSettingsRepository implements WorkspaceSettingsRepository {
+  public constructor(private readonly client: PrismaClient) {}
+
+  public async getByWorkspaceId(workspaceId: string): Promise<WorkspaceSettings> {
+    const workspace = await this.client.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { settings: true },
+    });
+
+    return fromJson<WorkspaceSettings>(workspace?.settings ?? null, defaultWorkspaceSettings);
+  }
+
+  public async update(workspaceId: string, settings: WorkspaceSettings): Promise<WorkspaceSettings> {
+    const workspace = await this.client.workspace.update({
+      where: { id: workspaceId },
+      data: { settings: toJson(settings) },
+      select: { settings: true },
+    });
+
+    return fromJson<WorkspaceSettings>(workspace.settings, defaultWorkspaceSettings);
   }
 }
 

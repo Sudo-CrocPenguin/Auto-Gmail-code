@@ -51,6 +51,10 @@ import { MarkSenderSuspiciousUseCase } from "../features/senders/application/mar
 import { TrustSenderUseCase } from "../features/senders/application/trust-sender.use-case";
 import { SenderController } from "../features/senders/presentation/http/sender.controller";
 import { createSenderRouter } from "../features/senders/presentation/http/sender.routes";
+import { GetWorkspaceSettingsUseCase } from "../features/settings/application/get-workspace-settings.use-case";
+import { UpdateWorkspaceSettingsUseCase } from "../features/settings/application/update-workspace-settings.use-case";
+import { SettingsController } from "../features/settings/presentation/http/settings.controller";
+import { createSettingsRouter } from "../features/settings/presentation/http/settings.routes";
 import { GetCurrentWorkspaceUseCase } from "../features/workspace/application/get-current-workspace.use-case";
 import { UpdateCurrentWorkspaceUseCase } from "../features/workspace/application/update-current-workspace.use-case";
 import { WorkspaceController } from "../features/workspace/presentation/http/workspace.controller";
@@ -73,6 +77,7 @@ import {
   InMemoryGmailAccountRepository,
   InMemoryGmailOAuthTokenRepository,
   InMemorySenderProfileRepository,
+  InMemoryWorkspaceSettingsRepository,
   InMemoryUserRepository,
   InMemoryWorkspaceRepository,
 } from "./infrastructure/persistence/in-memory-repositories";
@@ -85,6 +90,7 @@ import {
   PrismaGmailAccountRepository,
   PrismaGmailOAuthTokenRepository,
   PrismaSenderProfileRepository,
+  PrismaWorkspaceSettingsRepository,
   PrismaUserRepository,
   PrismaWorkspaceRepository,
 } from "./infrastructure/persistence/prisma-repositories";
@@ -102,6 +108,7 @@ export interface ApplicationContainer {
     rules: Router;
     analytics: Router;
     audit: Router;
+    settings: Router;
   };
 }
 
@@ -117,6 +124,7 @@ export function buildContainer(): ApplicationContainer {
   const alerts = repositories.alerts;
   const senders = repositories.senders;
   const rules = repositories.rules;
+  const settings = repositories.settings;
 
   const jwtService = new JwtService();
   const tokenEncryptionService = new TokenEncryptionService();
@@ -143,6 +151,7 @@ export function buildContainer(): ApplicationContainer {
     alerts,
     senders,
     rules,
+    settings,
     jwtService,
     authMiddleware,
     gmailTokenVault,
@@ -168,6 +177,7 @@ function buildRepositories() {
       alerts: new PrismaAlertRepository(prisma),
       senders: new PrismaSenderProfileRepository(prisma),
       rules: new PrismaAutomationRuleRepository(prisma),
+      settings: new PrismaWorkspaceSettingsRepository(prisma),
     };
   }
 
@@ -183,6 +193,7 @@ function buildRepositories() {
     alerts: new InMemoryAlertRepository(database),
     senders: new InMemorySenderProfileRepository(database),
     rules: new InMemoryAutomationRuleRepository(database),
+    settings: new InMemoryWorkspaceSettingsRepository(database),
   };
 }
 
@@ -195,6 +206,7 @@ interface ComposedApplicationDependencies {
   alerts: InMemoryAlertRepository | PrismaAlertRepository;
   senders: InMemorySenderProfileRepository | PrismaSenderProfileRepository;
   rules: InMemoryAutomationRuleRepository | PrismaAutomationRuleRepository;
+  settings: InMemoryWorkspaceSettingsRepository | PrismaWorkspaceSettingsRepository;
   jwtService: JwtService;
   authMiddleware: AuthMiddleware;
   gmailTokenVault: GmailTokenVault;
@@ -283,6 +295,10 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
   );
 
   const auditController = new AuditController(new ListAuditLogsUseCase(dependencies.auditLogs));
+  const settingsController = new SettingsController(
+    new GetWorkspaceSettingsUseCase(dependencies.settings),
+    new UpdateWorkspaceSettingsUseCase(dependencies.settings, dependencies.auditLogs),
+  );
 
   return {
     routes: {
@@ -295,6 +311,7 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       rules: createRuleRouter(ruleController, dependencies.authMiddleware),
       analytics: createAnalyticsRouter(analyticsController, dependencies.authMiddleware),
       audit: createAuditRouter(auditController, dependencies.authMiddleware),
+      settings: createSettingsRouter(settingsController, dependencies.authMiddleware),
     },
   };
 }

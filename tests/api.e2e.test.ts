@@ -129,4 +129,32 @@ describe("Auto-Gmail-code API", () => {
     expect(summary.status).toBe(200);
     expect(summary.body.data.totalEmails).toBeGreaterThan(0);
   });
+
+  it("expone configuracion del workspace y contrato OpenAPI", async () => {
+    const token = await login();
+
+    const settings = await request(app)
+      .get("/api/settings")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(settings.status).toBe(200);
+    expect(settings.body.data.theme).toBe("system");
+
+    const updatedSettings = await request(app)
+      .patch("/api/settings")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        ...settings.body.data,
+        theme: "dark",
+      });
+
+    expect(updatedSettings.status).toBe(200);
+    expect(updatedSettings.body.data.theme).toBe("dark");
+
+    const openapi = await request(app).get("/api/openapi.json");
+
+    expect(openapi.status).toBe(200);
+    expect(openapi.body.openapi).toBe("3.0.3");
+    expect(openapi.body.paths["/emails"]).toBeDefined();
+  });
 });

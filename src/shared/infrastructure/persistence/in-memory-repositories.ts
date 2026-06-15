@@ -7,6 +7,8 @@ import type { GmailAccountRepository } from "../../../features/gmail-accounts/do
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfileRepository, SenderQueryParams } from "../../../features/senders/domain/sender-profile.repository";
+import { defaultWorkspaceSettings, type WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
+import type { WorkspaceSettingsRepository } from "../../../features/settings/domain/workspace-settings.repository";
 import type { WorkspaceRepository } from "../../../features/workspace/domain/workspace.repository";
 import type { InMemoryDatabase } from "./in-memory-database";
 
@@ -67,6 +69,19 @@ export class InMemoryWorkspaceRepository implements WorkspaceRepository {
 
     Object.assign(workspace, data);
     return clone(workspace);
+  }
+}
+
+export class InMemoryWorkspaceSettingsRepository implements WorkspaceSettingsRepository {
+  public constructor(private readonly database: InMemoryDatabase) {}
+
+  public async getByWorkspaceId(workspaceId: string): Promise<WorkspaceSettings> {
+    return clone(this.database.workspaceSettings[workspaceId] ?? defaultWorkspaceSettings);
+  }
+
+  public async update(workspaceId: string, settings: WorkspaceSettings): Promise<WorkspaceSettings> {
+    this.database.workspaceSettings[workspaceId] = clone(settings);
+    return clone(settings);
   }
 }
 

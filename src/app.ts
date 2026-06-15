@@ -8,6 +8,7 @@ import { buildContainer, type ApplicationContainer } from "./shared/container";
 import { errorHandler } from "./shared/http/middlewares/error-handler.middleware";
 import { notFoundHandler } from "./shared/http/middlewares/not-found.middleware";
 import { healthRouter } from "./shared/http/routes/health.routes";
+import { openApiRouter } from "./shared/http/routes/openapi.routes";
 
 export function createApp(container: ApplicationContainer = buildContainer()): Express {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp(container: ApplicationContainer = buildContainer()): E
   }
 
   app.use(`${environment.apiPrefix}/health`, healthRouter);
+  app.use(`${environment.apiPrefix}/openapi.json`, openApiRouter);
   app.use(`${environment.apiPrefix}/auth`, container.routes.auth);
   app.use(`${environment.apiPrefix}/workspaces`, container.routes.workspace);
   app.use(`${environment.apiPrefix}/gmail`, container.routes.gmail);
@@ -36,6 +38,7 @@ export function createApp(container: ApplicationContainer = buildContainer()): E
   app.use(`${environment.apiPrefix}/rules`, container.routes.rules);
   app.use(`${environment.apiPrefix}/analytics`, container.routes.analytics);
   app.use(`${environment.apiPrefix}/audit`, container.routes.audit);
+  app.use(`${environment.apiPrefix}/settings`, container.routes.settings);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

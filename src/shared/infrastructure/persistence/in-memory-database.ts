@@ -8,11 +8,13 @@ import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { AutomationRule } from "../../../features/rules/domain/automation-rule.entity";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
+import type { WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
 import type { Workspace } from "../../../features/workspace/domain/workspace.entity";
 
 export interface InMemoryDatabase {
   users: User[];
   workspaces: Workspace[];
+  workspaceSettings: Record<string, WorkspaceSettings>;
   gmailAccounts: GmailAccount[];
   gmailOAuthTokens: GmailOAuthToken[];
   emails: EmailMessage[];
@@ -53,6 +55,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         createdAt: "2026-06-01T08:00:00.000Z",
       },
     ],
+    workspaceSettings: {},
     gmailAccounts: [
       {
         id: primaryGmailId,
