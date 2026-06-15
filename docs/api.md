@@ -81,9 +81,18 @@ Consulta estado final conocido del flujo OAuth.
 
 Callback configurado para Google OAuth. Recibe `code`, `state` o `error`, registra auditoria si el `state` identifica workspace y redirige al frontend con `oauth=success` u `oauth=error`.
 
+Cuando Google OAuth esta configurado, este endpoint:
+
+1. Intercambia `code` por credenciales OAuth.
+2. Obtiene el perfil Gmail autorizado.
+3. Crea o actualiza la cuenta Gmail del workspace.
+4. Guarda tokens cifrados en backend.
+5. Sincroniza mensajes recientes con Gmail API.
+6. Redirige al frontend con `gmailAccountId`, `email` y `synced`.
+
 ### POST /api/gmail/accounts/:id/sync
 
-Solicita sincronizacion manual.
+Solicita sincronizacion manual. Si la cuenta tiene credenciales OAuth guardadas, usa Gmail API real. Si la cuenta pertenece a los datos demo y no tiene tokens, ejecuta el comportamiento demo.
 
 ### POST /api/gmail/accounts/:id/reconnect
 

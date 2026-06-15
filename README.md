@@ -59,9 +59,11 @@ Variables principales:
 - `API_PREFIX`: prefijo de API. Por defecto `/api`.
 - `FRONTEND_URL`: URL del frontend para CORS y redirecciones OAuth demo.
 - `JWT_SECRET`: secreto para firmar JWT. Cambiar en local/produccion.
+- `TOKEN_ENCRYPTION_KEY`: clave usada para cifrar tokens Gmail en backend.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`: credenciales OAuth de Google.
+- `GMAIL_SYNC_MAX_MESSAGES`: cantidad maxima de mensajes recientes a traer por sincronizacion.
 
-Si no hay credenciales Google, el endpoint OAuth devuelve una URL demo funcional para desarrollo.
+Si no hay credenciales Google, el endpoint OAuth devuelve una URL demo funcional para desarrollo. Si las credenciales existen, el callback intercambia el `code` por tokens, guarda los tokens cifrados en backend, crea o actualiza la cuenta Gmail y sincroniza mensajes reales.
 
 ## Scripts
 
@@ -78,6 +80,46 @@ npm run check    # build + tests
 ```txt
 email: owner@autogmail.local
 password: Password123!
+```
+
+## Conectar Gmail real
+
+1. Crea un OAuth Client en Google Cloud Console.
+2. Configura como redirect URI autorizado:
+
+```txt
+http://localhost:4000/api/gmail/oauth/callback
+```
+
+3. Copia `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y define un `TOKEN_ENCRYPTION_KEY` propio en `.env`.
+4. Arranca el backend:
+
+```bash
+npm run dev
+```
+
+5. Inicia sesion:
+
+```bash
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@autogmail.local","password":"Password123!"}'
+```
+
+6. Usa el `accessToken` para iniciar OAuth:
+
+```bash
+curl -X POST http://localhost:4000/api/gmail/oauth/start \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+7. Abre `data.authUrl` en el navegador y acepta permisos de Gmail.
+8. Al volver al callback, el backend sincroniza mensajes recientes.
+9. Consulta correos reales:
+
+```bash
+curl "http://localhost:4000/api/emails?limit=25" \
+  -H "Authorization: Bearer <accessToken>"
 ```
 
 ## Endpoints principales
@@ -118,7 +160,7 @@ Mas detalle en [docs/api.md](docs/api.md).
 
 - Gmail solo se conecta por OAuth.
 - La API no acepta ni solicita contrasenas Gmail.
-- No se devuelven tokens Gmail.
+- Los tokens Gmail se cifran en backend y no se devuelven al frontend.
 - Las rutas privadas usan JWT Bearer.
 - Los cuerpos HTML de correos se sanitizan antes de responder.
 - Acciones sensibles quedan registradas en auditoria.

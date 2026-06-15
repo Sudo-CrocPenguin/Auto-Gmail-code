@@ -7,7 +7,8 @@ El backend evita exponer credenciales o datos sensibles de Gmail al frontend. Gm
 ## Reglas aplicadas
 
 - No se solicita contrasena Gmail.
-- No se guardan ni exponen access tokens o refresh tokens Gmail en respuestas HTTP.
+- No se exponen access tokens o refresh tokens Gmail en respuestas HTTP.
+- Los tokens Gmail se cifran con AES-256-GCM mediante `TOKEN_ENCRYPTION_KEY`.
 - Las rutas privadas requieren `Authorization: Bearer <accessToken>`.
 - Los endpoints que modifican Gmail, workspace o reglas validan rol `OWNER` o `ADMIN`.
 - El cuerpo HTML de correos se sanitiza con `sanitize-html` antes de responder.
@@ -26,11 +27,12 @@ El endpoint `POST /api/gmail/oauth/start` construye la URL de Google cuando exis
 
 Si faltan credenciales, devuelve una URL demo para desarrollo. Esto permite probar el frontend y los flujos sin pedir contrasenas Gmail ni manejar tokens reales.
 
+Con credenciales configuradas, el callback OAuth intercambia el codigo por tokens, consulta el perfil Gmail, guarda credenciales cifradas y ejecuta una sincronizacion inicial de mensajes recientes.
+
 ## Pendiente para produccion
 
 - Persistir usuarios, workspaces y auditoria en base de datos real.
-- Guardar tokens Gmail cifrados solo en backend.
-- Completar el adaptador de intercambio de codigo OAuth por tokens y perfil Gmail.
+- Persistir tokens cifrados en una base de datos real en lugar del repositorio en memoria.
 - Firmar y verificar criptograficamente el parametro `state` OAuth.
 - Configurar rotacion de secretos.
 - Agregar rate limiting por IP y usuario.
