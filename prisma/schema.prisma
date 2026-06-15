@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id
+  workspaceId  String
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String
+  createdAt    DateTime
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  auditLogs    AuditLog[]
+
+  @@index([workspaceId])
+  @@map("users")
+}
+
+model Workspace {
+  id            String         @id
+  name          String
+  ownerId       String
+  plan          String
+  createdAt     DateTime
+  settings      Json?
+  users         User[]
+  gmailAccounts GmailAccount[]
+  emails        EmailMessage[]
+  alerts        Alert[]
+  senders       SenderProfile[]
+  rules         AutomationRule[]
+  auditLogs     AuditLog[]
+
+  @@map("workspaces")
+}
+
+model GmailAccount {
+  id              String            @id
+  workspaceId     String
+  emailAddress    String
+  status          String
+  lastSyncAt      DateTime?
+  watchExpiration DateTime?
+  totalMessages   Int
+  grantedScopes   Json
+  errorMessage    String?
+  historyId       String?
+  createdAt       DateTime
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  oauthToken      GmailOAuthToken?
+  emails          EmailMessage[]
+  alerts          Alert[]
+
+  @@unique([workspaceId, emailAddress])
+  @@index([workspaceId])
+  @@map("gmail_accounts")
+}
+
+model GmailOAuthToken {
+  gmailAccountId       String       @id
+  workspaceId          String
+  encryptedAccessToken String?
+  encryptedRefreshToken String?
+  encryptedIdToken     String?
+  scope                String?
+  tokenType            String?
+  expiryDate           BigInt?
+  createdAt            DateTime
+  updatedAt            DateTime
+  gmailAccount         GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("gmail_oauth_tokens")
+}
+
+model EmailMessage {
+  id              String       @id
+  workspaceId     String
+  gmailAccountId  String
+  gmailMessageId  String
+  threadId        String
+  accountEmail    String
+  fromEmail       String
+  fromName        String?
+  fromDomain      String
+  toEmails        Json
+  subject         String
+  snippet         String
+  bodyHtml        String?
+  receivedAt      DateTime
+  labelIds        Json
+  hasAttachments  Boolean
+  attachments     Json
+  isRead          Boolean
+  isSpam          Boolean
+  isImportant     Boolean
+  reviewedAt      DateTime?
+  gmailUrl        String?
+  classification  Json?
+  actionHistory   Json
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  gmailAccount    GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
+  alerts          Alert[]
+
+  @@unique([workspaceId, gmailAccountId, gmailMessageId])
+  @@index([workspaceId, receivedAt])
+  @@index([workspaceId, fromEmail])
+  @@index([workspaceId, fromDomain])
+  @@index([gmailAccountId])
+  @@map("email_messages")
+}
+
+model Alert {
+  id                String        @id
+  workspaceId       String
+  gmailAccountId    String
+  emailMessageId    String?
+  type              String
+  severity          String
+  title             String
+  description       String
+  status            String
+  recommendedAction String
+  createdAt         DateTime
+  resolvedAt        DateTime?
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  gmailAccount      GmailAccount  @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
+  emailMessage      EmailMessage? @relation(fields: [emailMessageId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, severity])
+  @@map("alerts")
+}
+
+model SenderProfile {
+  id            String    @id
+  workspaceId   String
+  email         String
+  domain        String
+  displayName   String?
+  totalMessages Int
+  lastSeenAt    DateTime
+  trustScore    Int
+  riskScore     Int
+  category      String?
+  status        String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, domain])
+  @@map("sender_profiles")
+}
+
+model AutomationRule {
+  id           String    @id
+  workspaceId  String
+  name         String
+  description  String?
+  conditions   Json
+  actions      Json
+  priority     Int
+  enabled      Boolean
+  timesApplied Int
+  createdAt    DateTime
+  updatedAt    DateTime
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, enabled])
+  @@index([workspaceId, priority])
+  @@map("automation_rules")
+}
+
+model AuditLog {
+  id          String     @id
+  workspaceId String
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  description String
+  ip          String?
+  metadata    Json
+  createdAt   DateTime
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, action])
+  @@map("audit_logs")
+}
+
