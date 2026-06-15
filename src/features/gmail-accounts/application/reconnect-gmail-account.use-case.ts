@@ -6,11 +6,13 @@ import { environment } from "../../../shared/config/environment";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
 
 export class ReconnectGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
+    private readonly gmailClient: GoogleGmailClient,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string) {
@@ -32,15 +34,7 @@ export class ReconnectGmailAccountUseCase {
     ).toString("base64url");
 
     const authUrl = configured
-      ? `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
-          client_id: environment.google.clientId,
-          redirect_uri: environment.google.redirectUri,
-          response_type: "code",
-          scope: environment.google.scopes.join(" "),
-          access_type: "offline",
-          prompt: "consent",
-          state,
-        }).toString()}`
+      ? this.gmailClient.buildAuthUrl(state)
       : `${environment.frontendUrl}/gmail-accounts?oauth=reconnect-demo&accountId=${accountId}&state=${state}`;
 
     if (!configured) {
@@ -71,4 +65,3 @@ export class ReconnectGmailAccountUseCase {
     };
   }
 }
-

@@ -6,11 +6,13 @@ import type { AuthenticatedContext } from "../../../shared/domain/authenticated-
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import { GmailSyncService } from "./gmail-sync.service";
 
 export class SyncGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
+    private readonly gmailSyncService: GmailSyncService,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string): Promise<GmailAccount> {
@@ -19,6 +21,11 @@ export class SyncGmailAccountUseCase {
     const account = await this.gmailAccounts.findById(accountId);
     if (!account || account.workspaceId !== context.workspaceId) {
       throw new NotFoundError("La cuenta Gmail no existe.", "GMAIL_ACCOUNT_NOT_FOUND");
+    }
+
+    const syncResult = await this.gmailSyncService.syncAccount(context, account);
+    if (syncResult) {
+      return syncResult.account;
     }
 
     const updatedAccount = await this.gmailAccounts.update(account.id, {
@@ -48,4 +55,3 @@ export class SyncGmailAccountUseCase {
     return updatedAccount;
   }
 }
-

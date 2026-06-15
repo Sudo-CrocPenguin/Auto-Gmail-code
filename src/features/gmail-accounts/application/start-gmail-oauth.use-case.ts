@@ -4,6 +4,7 @@ import type { AuditLogRepository } from "../../audit/domain/audit-log.repository
 import { assertOwnerOrAdmin } from "../../../shared/application/authorization";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
 import { environment } from "../../../shared/config/environment";
+import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
 
 export interface StartGmailOAuthOutput {
   authUrl: string;
@@ -13,7 +14,10 @@ export interface StartGmailOAuthOutput {
 }
 
 export class StartGmailOAuthUseCase {
-  public constructor(private readonly auditLogs: AuditLogRepository) {}
+  public constructor(
+    private readonly auditLogs: AuditLogRepository,
+    private readonly gmailClient: GoogleGmailClient,
+  ) {}
 
   public async execute(context: AuthenticatedContext): Promise<StartGmailOAuthOutput> {
     assertOwnerOrAdmin(context, "Solo propietarios o administradores pueden conectar Gmail.");
@@ -28,7 +32,7 @@ export class StartGmailOAuthUseCase {
 
     const configured = Boolean(environment.google.clientId && environment.google.clientSecret);
     const authUrl = configured
-      ? this.buildGoogleOAuthUrl(state)
+      ? this.gmailClient.buildAuthUrl(state)
       : `${environment.frontendUrl}/gmail-accounts?oauth=demo&state=${state}`;
 
     await this.auditLogs.create({
@@ -54,18 +58,4 @@ export class StartGmailOAuthUseCase {
     };
   }
 
-  private buildGoogleOAuthUrl(state: string): string {
-    const params = new URLSearchParams({
-      client_id: environment.google.clientId,
-      redirect_uri: environment.google.redirectUri,
-      response_type: "code",
-      scope: environment.google.scopes.join(" "),
-      access_type: "offline",
-      prompt: "consent",
-      state,
-    });
-
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  }
 }
-

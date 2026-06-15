@@ -25,11 +25,14 @@ import { EmailController } from "../features/emails/presentation/http/email.cont
 import { createEmailRouter } from "../features/emails/presentation/http/email.routes";
 import { DisconnectGmailAccountUseCase } from "../features/gmail-accounts/application/disconnect-gmail-account.use-case";
 import { GetGmailOAuthStatusUseCase } from "../features/gmail-accounts/application/get-gmail-oauth-status.use-case";
+import { GmailSyncService } from "../features/gmail-accounts/application/gmail-sync.service";
 import { HandleGmailOAuthCallbackUseCase } from "../features/gmail-accounts/application/handle-gmail-oauth-callback.use-case";
 import { ListGmailAccountsUseCase } from "../features/gmail-accounts/application/list-gmail-accounts.use-case";
 import { ReconnectGmailAccountUseCase } from "../features/gmail-accounts/application/reconnect-gmail-account.use-case";
 import { StartGmailOAuthUseCase } from "../features/gmail-accounts/application/start-gmail-oauth.use-case";
 import { SyncGmailAccountUseCase } from "../features/gmail-accounts/application/sync-gmail-account.use-case";
+import { GmailTokenVault } from "../features/gmail-accounts/infrastructure/gmail-token-vault";
+import { GoogleGmailClient } from "../features/gmail-accounts/infrastructure/google-gmail.client";
 import { GmailAccountController } from "../features/gmail-accounts/presentation/http/gmail-account.controller";
 import { createGmailAccountRouter } from "../features/gmail-accounts/presentation/http/gmail-account.routes";
 import { CreateRuleUseCase } from "../features/rules/application/create-rule.use-case";
@@ -65,11 +68,13 @@ import {
   InMemoryAutomationRuleRepository,
   InMemoryEmailMessageRepository,
   InMemoryGmailAccountRepository,
+  InMemoryGmailOAuthTokenRepository,
   InMemorySenderProfileRepository,
   InMemoryUserRepository,
   InMemoryWorkspaceRepository,
 } from "./infrastructure/persistence/in-memory-repositories";
 import { JwtService } from "./infrastructure/security/jwt.service";
+import { TokenEncryptionService } from "./infrastructure/security/token-encryption.service";
 
 export interface ApplicationContainer {
   routes: {
@@ -92,11 +97,24 @@ export function buildContainer(): ApplicationContainer {
   const workspaces = new InMemoryWorkspaceRepository(database);
   const auditLogs = new InMemoryAuditLogRepository(database);
   const gmailAccounts = new InMemoryGmailAccountRepository(database);
+  const gmailOAuthTokens = new InMemoryGmailOAuthTokenRepository(database);
   const emails = new InMemoryEmailMessageRepository(database);
   const alerts = new InMemoryAlertRepository(database);
   const senders = new InMemorySenderProfileRepository(database);
   const rules = new InMemoryAutomationRuleRepository(database);
   const jwtService = new JwtService();
+  const tokenEncryptionService = new TokenEncryptionService();
+  const gmailTokenVault = new GmailTokenVault(gmailOAuthTokens, tokenEncryptionService);
+  const googleGmailClient = new GoogleGmailClient();
+  const gmailSyncService = new GmailSyncService(
+    gmailAccounts,
+    emails,
+    alerts,
+    senders,
+    auditLogs,
+    gmailTokenVault,
+    googleGmailClient,
+  );
   const authMiddleware = new AuthMiddleware(jwtService);
 
   const authController = new AuthController(
@@ -113,12 +131,18 @@ export function buildContainer(): ApplicationContainer {
 
   const gmailAccountController = new GmailAccountController(
     new ListGmailAccountsUseCase(gmailAccounts),
-    new StartGmailOAuthUseCase(auditLogs),
+    new StartGmailOAuthUseCase(auditLogs, googleGmailClient),
     new GetGmailOAuthStatusUseCase(),
-    new HandleGmailOAuthCallbackUseCase(auditLogs),
-    new SyncGmailAccountUseCase(gmailAccounts, auditLogs),
-    new ReconnectGmailAccountUseCase(gmailAccounts, auditLogs),
-    new DisconnectGmailAccountUseCase(gmailAccounts, auditLogs),
+    new HandleGmailOAuthCallbackUseCase(
+      auditLogs,
+      gmailAccounts,
+      gmailTokenVault,
+      googleGmailClient,
+      gmailSyncService,
+    ),
+    new SyncGmailAccountUseCase(gmailAccounts, auditLogs, gmailSyncService),
+    new ReconnectGmailAccountUseCase(gmailAccounts, auditLogs, googleGmailClient),
+    new DisconnectGmailAccountUseCase(gmailAccounts, auditLogs, gmailTokenVault),
   );
 
   const emailController = new EmailController(

@@ -6,11 +6,13 @@ import type { AuthenticatedContext } from "../../../shared/domain/authenticated-
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
 
 export class DisconnectGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
+    private readonly tokenVault: GmailTokenVault,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string): Promise<GmailAccount> {
@@ -26,6 +28,7 @@ export class DisconnectGmailAccountUseCase {
       watchExpiration: null,
       errorMessage: null,
     });
+    await this.tokenVault.deleteCredentials(account.id);
 
     await this.auditLogs.create({
       id: randomUUID(),
@@ -47,4 +50,3 @@ export class DisconnectGmailAccountUseCase {
     return updatedAccount;
   }
 }
-
