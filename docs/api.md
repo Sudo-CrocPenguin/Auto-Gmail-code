@@ -198,3 +198,25 @@ Query params:
 - `userId`
 - `dateFrom`
 - `dateTo`
+
+## Settings
+
+### GET /api/settings
+
+Devuelve configuracion del workspace:
+
+- `theme`
+- `language`
+- `notifications`
+- `classification`
+- `retention`
+
+### PATCH /api/settings
+
+Actualiza configuracion del workspace. Requiere rol `OWNER` o `ADMIN`.
+
+## OpenAPI
+
+### GET /api/openapi.json
+
+Devuelve el contrato OpenAPI base para integracion frontend.

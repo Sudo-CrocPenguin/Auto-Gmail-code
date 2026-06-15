@@ -37,8 +37,19 @@ El flujo de una peticion privada es:
 - `rules`: reglas automaticas con condiciones y acciones.
 - `analytics`: KPIs y agregaciones simples para dashboard.
 - `audit`: trazabilidad de acciones de usuario y sistema.
+- `settings`: preferencias del workspace para tema, idioma, notificaciones, clasificacion y retencion.
 
-## Persistencia actual
+## Persistencia
 
-La implementacion actual usa repositorios en memoria con datos seed. Esto hace que la API sea funcional sin infraestructura externa. Para produccion se debe reemplazar `InMemory*Repository` por adaptadores de base de datos manteniendo los mismos contratos de dominio.
+La implementacion soporta dos drivers:
 
+- `memory`: datos seed en memoria para tests y prototipado rapido.
+- `prisma`: PostgreSQL mediante Prisma Client y migraciones versionadas.
+
+El selector esta controlado por `PERSISTENCE_DRIVER`. Los casos de uso dependen de contratos de repositorio, por lo que pueden usar memoria o PostgreSQL sin cambiar controladores ni logica de negocio.
+
+## Base de datos
+
+La migracion inicial crea tablas para usuarios, workspaces, cuentas Gmail, tokens OAuth cifrados, correos, alertas, remitentes, reglas y auditoria. Las preferencias de settings viven en la columna `workspaces.settings`.
+
+Los campos variables como reglas, adjuntos, metadata de auditoria, settings y clasificacion se almacenan como `JSONB` para preservar flexibilidad sin bloquear el contrato del frontend.

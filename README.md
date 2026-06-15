@@ -2,7 +2,7 @@
 
 Auto-Gmail-code es una plataforma cliente-servidor para conectar multiples cuentas Gmail via OAuth y Gmail API, sincronizar correos, clasificarlos por remitente, importancia, spam y alertas de seguridad, y gestionarlos desde web, movil y escritorio.
 
-Este repositorio contiene el backend API inicial. La implementacion actual usa TypeScript, Express, DTOs con Zod, casos de uso por modulo y repositorios en memoria con datos seed. La capa de persistencia esta aislada para poder cambiar memoria por base de datos real sin rehacer controladores ni reglas de negocio.
+Este repositorio contiene el backend API inicial. La implementacion usa TypeScript, Express, DTOs con Zod, casos de uso por modulo, persistencia intercambiable y PostgreSQL con Prisma. La capa de aplicacion no depende de Express ni de la base de datos concreta.
 
 ## Para que sirve
 
@@ -58,6 +58,8 @@ Variables principales:
 - `PORT`: puerto HTTP. Por defecto `4000`.
 - `API_PREFIX`: prefijo de API. Por defecto `/api`.
 - `FRONTEND_URL`: URL del frontend para CORS y redirecciones OAuth demo.
+- `PERSISTENCE_DRIVER`: `memory` para tests/desarrollo rapido o `prisma` para PostgreSQL.
+- `DATABASE_URL`: conexion PostgreSQL cuando `PERSISTENCE_DRIVER=prisma`.
 - `JWT_SECRET`: secreto para firmar JWT. Cambiar en local/produccion.
 - `TOKEN_ENCRYPTION_KEY`: clave usada para cifrar tokens Gmail en backend.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`: credenciales OAuth de Google.
@@ -73,6 +75,10 @@ npm run build    # compila TypeScript
 npm start        # ejecuta dist/main.js
 npm test         # pruebas de integracion
 npm run check    # build + tests
+npm run db:generate  # genera Prisma Client
+npm run db:migrate   # aplica migraciones en desarrollo
+npm run db:deploy    # aplica migraciones en produccion
+npm run db:seed      # crea usuario demo en PostgreSQL
 ```
 
 ## Usuario demo
@@ -80,6 +86,14 @@ npm run check    # build + tests
 ```txt
 email: owner@autogmail.local
 password: Password123!
+```
+
+Con PostgreSQL:
+
+```bash
+PERSISTENCE_DRIVER=prisma npm run db:migrate
+PERSISTENCE_DRIVER=prisma npm run db:seed
+PERSISTENCE_DRIVER=prisma npm run dev
 ```
 
 ## Conectar Gmail real
@@ -153,6 +167,9 @@ curl "http://localhost:4000/api/emails?limit=25" \
 - `DELETE /api/rules/:id`
 - `GET /api/analytics/summary`
 - `GET /api/audit`
+- `GET /api/settings`
+- `PATCH /api/settings`
+- `GET /api/openapi.json`
 
 Mas detalle en [docs/api.md](docs/api.md).
 
@@ -164,5 +181,6 @@ Mas detalle en [docs/api.md](docs/api.md).
 - Las rutas privadas usan JWT Bearer.
 - Los cuerpos HTML de correos se sanitizan antes de responder.
 - Acciones sensibles quedan registradas en auditoria.
+- PostgreSQL/Prisma persiste usuarios, workspaces, tokens cifrados, correos, alertas, reglas, remitentes, settings y auditoria.
 
 Ver [docs/security.md](docs/security.md).
