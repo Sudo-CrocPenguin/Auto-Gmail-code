@@ -9,6 +9,9 @@
     "start": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
     "check": "npm run build && npm run test"
   },
   "keywords": [
@@ -21,6 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -41,6 +45,7 @@
     "@types/node": "^24.10.1",
     "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^6.0.3",
+    "prisma": "^6.19.3",
     "supertest": "^7.1.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
