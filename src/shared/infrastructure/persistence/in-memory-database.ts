@@ -62,6 +62,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         lastSyncAt: "2026-06-15T09:55:00.000Z",
         watchExpiration: "2026-06-22T09:55:00.000Z",
         totalMessages: 1264,
+        historyId: null,
         grantedScopes: [
           "https://www.googleapis.com/auth/gmail.readonly",
           "https://www.googleapis.com/auth/gmail.modify",
@@ -77,6 +78,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         lastSyncAt: "2026-06-15T09:40:00.000Z",
         watchExpiration: "2026-06-22T09:40:00.000Z",
         totalMessages: 842,
+        historyId: null,
         grantedScopes: ["https://www.googleapis.com/auth/gmail.readonly"],
         errorMessage: null,
         createdAt: "2026-06-03T11:10:00.000Z",
@@ -89,6 +91,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         lastSyncAt: "2026-06-13T18:20:00.000Z",
         watchExpiration: null,
         totalMessages: 304,
+        historyId: null,
         grantedScopes: ["https://www.googleapis.com/auth/gmail.readonly"],
         errorMessage: "El refresh token fue revocado por Google.",
         createdAt: "2026-06-05T14:45:00.000Z",

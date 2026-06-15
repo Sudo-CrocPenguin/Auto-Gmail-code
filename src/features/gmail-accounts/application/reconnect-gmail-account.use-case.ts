@@ -7,12 +7,14 @@ import type { AuthenticatedContext } from "../../../shared/domain/authenticated-
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
 import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
+import { OAuthStateService } from "./oauth-state.service";
 
 export class ReconnectGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly gmailClient: GoogleGmailClient,
+    private readonly oauthStateService: OAuthStateService,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string) {
@@ -24,14 +26,12 @@ export class ReconnectGmailAccountUseCase {
     }
 
     const configured = Boolean(environment.google.clientId && environment.google.clientSecret);
-    const state = Buffer.from(
-      JSON.stringify({
-        workspaceId: context.workspaceId,
-        userId: context.userId,
-        accountId,
-        nonce: randomUUID(),
-      }),
-    ).toString("base64url");
+    const state = this.oauthStateService.sign({
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      accountId,
+      nonce: randomUUID(),
+    });
 
     const authUrl = configured
       ? this.gmailClient.buildAuthUrl(state)

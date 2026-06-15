@@ -45,10 +45,10 @@ export class GmailSyncService {
     });
 
     try {
-      const [profile, gmailMessages] = await Promise.all([
-        this.gmailClient.getProfile(credentials),
-        this.gmailClient.fetchRecentMessages(credentials),
-      ]);
+      const profile = await this.gmailClient.getProfile(credentials);
+      const gmailMessages = account.historyId
+        ? await this.fetchIncrementalOrRecent(credentials, account.historyId)
+        : await this.gmailClient.fetchRecentMessages(credentials);
 
       let createdMessages = 0;
       for (const gmailMessage of gmailMessages) {
@@ -69,6 +69,7 @@ export class GmailSyncService {
         status: "CONNECTED",
         lastSyncAt: new Date().toISOString(),
         totalMessages: profile.messagesTotal,
+        historyId: profile.historyId,
         errorMessage: null,
       });
 
@@ -119,6 +120,17 @@ export class GmailSyncService {
         fetchedMessages: 0,
         createdMessages: 0,
       };
+    }
+  }
+
+  private async fetchIncrementalOrRecent(
+    credentials: NonNullable<Awaited<ReturnType<GmailTokenVault["getCredentials"]>>>,
+    historyId: string,
+  ) {
+    try {
+      return await this.gmailClient.fetchMessagesSinceHistoryId(credentials, historyId);
+    } catch {
+      return this.gmailClient.fetchRecentMessages(credentials);
     }
   }
 
@@ -290,4 +302,3 @@ function resolveAlertType(
   if (category === "LEGAL") return "LEGAL_NOTICE";
   return "HIGH_IMPORTANCE";
 }
-

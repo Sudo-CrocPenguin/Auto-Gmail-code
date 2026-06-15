@@ -7,17 +7,12 @@ import type { GmailAccountRepository } from "../domain/gmail-account.repository"
 import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
 import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
 import { GmailSyncService } from "./gmail-sync.service";
+import { type GmailOAuthState, OAuthStateService } from "./oauth-state.service";
 
 export interface HandleGmailOAuthCallbackInput {
   code?: string | undefined;
   state?: string | undefined;
   error?: string | undefined;
-}
-
-interface DecodedOAuthState {
-  workspaceId?: string;
-  userId?: string;
-  accountId?: string;
 }
 
 export class HandleGmailOAuthCallbackUseCase {
@@ -27,10 +22,21 @@ export class HandleGmailOAuthCallbackUseCase {
     private readonly tokenVault: GmailTokenVault,
     private readonly gmailClient: GoogleGmailClient,
     private readonly gmailSyncService: GmailSyncService,
+    private readonly oauthStateService: OAuthStateService,
   ) {}
 
   public async execute(input: HandleGmailOAuthCallbackInput) {
-    const decodedState = decodeState(input.state);
+    let decodedState: GmailOAuthState | null = null;
+    try {
+      decodedState = this.oauthStateService.verify(input.state);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "State OAuth invalido.";
+      return {
+        redirectUrl: `${environment.frontendUrl}/gmail-accounts?oauth=error&error=${encodeURIComponent(
+          message,
+        )}`,
+      };
+    }
 
     if (input.error || !input.code) {
       await this.writeAudit(decodedState, "GMAIL_OAUTH_FAILED", "Google OAuth no se completo.", {
@@ -102,16 +108,12 @@ export class HandleGmailOAuthCallbackUseCase {
   }
 
   private async upsertAccount(
-    state: DecodedOAuthState,
+    state: GmailOAuthState,
     emailAddress: string,
     messagesTotal: number,
   ): Promise<GmailAccount> {
     const now = new Date().toISOString();
     const workspaceId = state.workspaceId;
-
-    if (!workspaceId) {
-      throw new Error("El state OAuth no contiene workspaceId.");
-    }
 
     const accountFromState = state.accountId ? await this.gmailAccounts.findById(state.accountId) : null;
     if (accountFromState && accountFromState.workspaceId === workspaceId) {
@@ -121,6 +123,7 @@ export class HandleGmailOAuthCallbackUseCase {
         lastSyncAt: now,
         watchExpiration: null,
         totalMessages: messagesTotal,
+        historyId: null,
         grantedScopes: environment.google.scopes,
         errorMessage: null,
       });
@@ -136,6 +139,7 @@ export class HandleGmailOAuthCallbackUseCase {
         status: "CONNECTED",
         lastSyncAt: now,
         totalMessages: messagesTotal,
+        historyId: null,
         grantedScopes: environment.google.scopes,
         errorMessage: null,
       });
@@ -153,6 +157,7 @@ export class HandleGmailOAuthCallbackUseCase {
       lastSyncAt: now,
       watchExpiration: null,
       totalMessages: messagesTotal,
+      historyId: null,
       grantedScopes: environment.google.scopes,
       errorMessage: null,
       createdAt: now,
@@ -160,12 +165,12 @@ export class HandleGmailOAuthCallbackUseCase {
   }
 
   private async writeAudit(
-    state: DecodedOAuthState,
+    state: GmailOAuthState | null,
     action: string,
     description: string,
     metadata: Record<string, unknown>,
   ): Promise<void> {
-    if (!state.workspaceId) {
+    if (!state?.workspaceId) {
       return;
     }
 
@@ -181,17 +186,5 @@ export class HandleGmailOAuthCallbackUseCase {
       metadata,
       createdAt: new Date().toISOString(),
     });
-  }
-}
-
-function decodeState(state: string | undefined): DecodedOAuthState {
-  if (!state) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as DecodedOAuthState;
-  } catch {
-    return {};
   }
 }

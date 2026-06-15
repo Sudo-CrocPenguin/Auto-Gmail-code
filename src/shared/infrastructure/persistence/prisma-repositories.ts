@@ -81,6 +81,7 @@ function mapGmailAccount(account: Prisma.GmailAccountGetPayload<object>): GmailA
     lastSyncAt: toIso(account.lastSyncAt),
     watchExpiration: toIso(account.watchExpiration),
     totalMessages: account.totalMessages,
+    historyId: account.historyId,
     grantedScopes: fromJson<string[]>(account.grantedScopes, []),
     errorMessage: account.errorMessage,
     createdAt: toIsoRequired(account.createdAt),
@@ -302,6 +303,7 @@ export class PrismaGmailAccountRepository implements GmailAccountRepository {
     if (data.lastSyncAt !== undefined) updateData.lastSyncAt = toDate(data.lastSyncAt);
     if (data.watchExpiration !== undefined) updateData.watchExpiration = toDate(data.watchExpiration);
     if (data.totalMessages !== undefined) updateData.totalMessages = data.totalMessages;
+    if (data.historyId !== undefined) updateData.historyId = data.historyId;
     if (data.grantedScopes !== undefined) updateData.grantedScopes = toJson(data.grantedScopes);
     if (data.errorMessage !== undefined) updateData.errorMessage = data.errorMessage;
 

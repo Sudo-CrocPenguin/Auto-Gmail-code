@@ -5,6 +5,7 @@ import { assertOwnerOrAdmin } from "../../../shared/application/authorization";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
 import { environment } from "../../../shared/config/environment";
 import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
+import { OAuthStateService } from "./oauth-state.service";
 
 export interface StartGmailOAuthOutput {
   authUrl: string;
@@ -17,18 +18,17 @@ export class StartGmailOAuthUseCase {
   public constructor(
     private readonly auditLogs: AuditLogRepository,
     private readonly gmailClient: GoogleGmailClient,
+    private readonly oauthStateService: OAuthStateService,
   ) {}
 
   public async execute(context: AuthenticatedContext): Promise<StartGmailOAuthOutput> {
     assertOwnerOrAdmin(context, "Solo propietarios o administradores pueden conectar Gmail.");
 
-    const state = Buffer.from(
-      JSON.stringify({
-        workspaceId: context.workspaceId,
-        userId: context.userId,
-        nonce: randomUUID(),
-      }),
-    ).toString("base64url");
+    const state = this.oauthStateService.sign({
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      nonce: randomUUID(),
+    });
 
     const configured = Boolean(environment.google.clientId && environment.google.clientSecret);
     const authUrl = configured

@@ -28,6 +28,7 @@ import { GetGmailOAuthStatusUseCase } from "../features/gmail-accounts/applicati
 import { GmailSyncService } from "../features/gmail-accounts/application/gmail-sync.service";
 import { HandleGmailOAuthCallbackUseCase } from "../features/gmail-accounts/application/handle-gmail-oauth-callback.use-case";
 import { ListGmailAccountsUseCase } from "../features/gmail-accounts/application/list-gmail-accounts.use-case";
+import { OAuthStateService } from "../features/gmail-accounts/application/oauth-state.service";
 import { ReconnectGmailAccountUseCase } from "../features/gmail-accounts/application/reconnect-gmail-account.use-case";
 import { StartGmailOAuthUseCase } from "../features/gmail-accounts/application/start-gmail-oauth.use-case";
 import { SyncGmailAccountUseCase } from "../features/gmail-accounts/application/sync-gmail-account.use-case";
@@ -119,6 +120,7 @@ export function buildContainer(): ApplicationContainer {
 
   const jwtService = new JwtService();
   const tokenEncryptionService = new TokenEncryptionService();
+  const oauthStateService = new OAuthStateService();
   const gmailTokenVault = new GmailTokenVault(gmailOAuthTokens, tokenEncryptionService);
   const googleGmailClient = new GoogleGmailClient();
   const gmailSyncService = new GmailSyncService(
@@ -146,6 +148,7 @@ export function buildContainer(): ApplicationContainer {
     gmailTokenVault,
     googleGmailClient,
     gmailSyncService,
+    oauthStateService,
   });
 }
 
@@ -197,6 +200,7 @@ interface ComposedApplicationDependencies {
   gmailTokenVault: GmailTokenVault;
   googleGmailClient: GoogleGmailClient;
   gmailSyncService: GmailSyncService;
+  oauthStateService: OAuthStateService;
 }
 
 function composeApplication(dependencies: ComposedApplicationDependencies): ApplicationContainer {
@@ -214,7 +218,11 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
 
   const gmailAccountController = new GmailAccountController(
     new ListGmailAccountsUseCase(dependencies.gmailAccounts),
-    new StartGmailOAuthUseCase(dependencies.auditLogs, dependencies.googleGmailClient),
+    new StartGmailOAuthUseCase(
+      dependencies.auditLogs,
+      dependencies.googleGmailClient,
+      dependencies.oauthStateService,
+    ),
     new GetGmailOAuthStatusUseCase(),
     new HandleGmailOAuthCallbackUseCase(
       dependencies.auditLogs,
@@ -222,9 +230,15 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       dependencies.gmailTokenVault,
       dependencies.googleGmailClient,
       dependencies.gmailSyncService,
+      dependencies.oauthStateService,
     ),
     new SyncGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailSyncService),
-    new ReconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.googleGmailClient),
+    new ReconnectGmailAccountUseCase(
+      dependencies.gmailAccounts,
+      dependencies.auditLogs,
+      dependencies.googleGmailClient,
+      dependencies.oauthStateService,
+    ),
     new DisconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailTokenVault),
   );
 

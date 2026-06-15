@@ -8,6 +8,7 @@ export interface GmailProfile {
   emailAddress: string;
   messagesTotal: number;
   threadsTotal: number;
+  historyId: string | null;
 }
 
 export interface SyncedGmailAttachment {
@@ -58,7 +59,43 @@ export class GoogleGmailClient {
       emailAddress,
       messagesTotal: response.data.messagesTotal ?? 0,
       threadsTotal: response.data.threadsTotal ?? 0,
+      historyId: response.data.historyId ?? null,
     };
+  }
+
+  public async fetchMessagesSinceHistoryId(
+    credentials: Credentials,
+    historyId: string,
+    maxResults = environment.google.syncMaxMessages,
+  ): Promise<SyncedGmailMessage[]> {
+    const gmail = this.createGmailClient(credentials);
+    const historyResponse = await gmail.users.history.list({
+      userId: "me",
+      startHistoryId: historyId,
+      historyTypes: ["messageAdded"],
+      maxResults,
+    });
+
+    const messageIds = new Set<string>();
+    for (const history of historyResponse.data.history ?? []) {
+      for (const addedMessage of history.messagesAdded ?? []) {
+        if (addedMessage.message?.id) {
+          messageIds.add(addedMessage.message.id);
+        }
+      }
+    }
+
+    const messages: SyncedGmailMessage[] = [];
+    for (const messageId of Array.from(messageIds).slice(0, maxResults)) {
+      const messageResponse = await gmail.users.messages.get({
+        userId: "me",
+        id: messageId,
+        format: "full",
+      });
+      messages.push(mapGmailMessage(messageResponse.data));
+    }
+
+    return messages;
   }
 
   public async fetchRecentMessages(
