@@ -4,23 +4,23 @@ import type { EmailMessage } from "./email-message.entity";
 
 export interface EmailQueryParams extends PaginationParams {
   workspaceId: string;
-  search?: string;
-  gmailAccountId?: string;
-  fromEmail?: string;
-  fromDomain?: string;
-  category?: EmailCategory;
-  isImportant?: boolean;
-  isSpam?: boolean;
-  actionRequired?: boolean;
-  hasAttachments?: boolean;
-  isRead?: boolean;
-  minImportanceScore?: number;
-  minRiskScore?: number;
-  minSecurityScore?: number;
-  dateFrom?: string;
-  dateTo?: string;
-  sortBy?: "receivedAt" | "importanceScore" | "riskScore" | "securityScore";
-  sortOrder?: "asc" | "desc";
+  search?: string | undefined;
+  gmailAccountId?: string | undefined;
+  fromEmail?: string | undefined;
+  fromDomain?: string | undefined;
+  category?: EmailCategory | undefined;
+  isImportant?: boolean | undefined;
+  isSpam?: boolean | undefined;
+  actionRequired?: boolean | undefined;
+  hasAttachments?: boolean | undefined;
+  isRead?: boolean | undefined;
+  minImportanceScore?: number | undefined;
+  minRiskScore?: number | undefined;
+  minSecurityScore?: number | undefined;
+  dateFrom?: string | undefined;
+  dateTo?: string | undefined;
+  sortBy?: "receivedAt" | "importanceScore" | "riskScore" | "securityScore" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
 }
 
 export interface EmailMessageRepository {
@@ -28,4 +28,3 @@ export interface EmailMessageRepository {
   findByWorkspace(params: EmailQueryParams): Promise<PaginatedResult<EmailMessage>>;
   update(id: string, data: Partial<EmailMessage>): Promise<EmailMessage | null>;
 }
-

@@ -29,6 +29,8 @@ export function createApp(container: ApplicationContainer = buildContainer()): E
   app.use(`${environment.apiPrefix}/health`, healthRouter);
   app.use(`${environment.apiPrefix}/auth`, container.routes.auth);
   app.use(`${environment.apiPrefix}/workspaces`, container.routes.workspace);
+  app.use(`${environment.apiPrefix}/gmail`, container.routes.gmail);
+  app.use(`${environment.apiPrefix}/emails`, container.routes.emails);
   app.use(notFoundHandler);
   app.use(errorHandler);
 
