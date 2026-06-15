@@ -31,6 +31,11 @@ export function createApp(container: ApplicationContainer = buildContainer()): E
   app.use(`${environment.apiPrefix}/workspaces`, container.routes.workspace);
   app.use(`${environment.apiPrefix}/gmail`, container.routes.gmail);
   app.use(`${environment.apiPrefix}/emails`, container.routes.emails);
+  app.use(`${environment.apiPrefix}/alerts`, container.routes.alerts);
+  app.use(`${environment.apiPrefix}/senders`, container.routes.senders);
+  app.use(`${environment.apiPrefix}/rules`, container.routes.rules);
+  app.use(`${environment.apiPrefix}/analytics`, container.routes.analytics);
+  app.use(`${environment.apiPrefix}/audit`, container.routes.audit);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

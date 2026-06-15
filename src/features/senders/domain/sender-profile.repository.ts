@@ -3,8 +3,8 @@ import type { SenderProfile } from "./sender-profile.entity";
 
 export interface SenderQueryParams extends PaginationParams {
   workspaceId: string;
-  search?: string;
-  status?: SenderProfile["status"];
+  search?: string | undefined;
+  status?: SenderProfile["status"] | undefined;
 }
 
 export interface SenderProfileRepository {
@@ -12,4 +12,3 @@ export interface SenderProfileRepository {
   findByWorkspace(params: SenderQueryParams): Promise<PaginatedResult<SenderProfile>>;
   update(id: string, data: Partial<SenderProfile>): Promise<SenderProfile | null>;
 }
-

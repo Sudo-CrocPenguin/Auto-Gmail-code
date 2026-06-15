@@ -3,8 +3,8 @@ import type { AutomationRule } from "./automation-rule.entity";
 
 export interface RuleQueryParams extends PaginationParams {
   workspaceId: string;
-  enabled?: boolean;
-  search?: string;
+  enabled?: boolean | undefined;
+  search?: string | undefined;
 }
 
 export interface AutomationRuleRepository {
@@ -14,4 +14,3 @@ export interface AutomationRuleRepository {
   update(id: string, data: Partial<AutomationRule>): Promise<AutomationRule | null>;
   delete(id: string): Promise<boolean>;
 }
-

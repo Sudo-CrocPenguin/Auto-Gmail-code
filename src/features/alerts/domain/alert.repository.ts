@@ -3,9 +3,9 @@ import type { Alert, AlertSeverity, AlertStatus, AlertType } from "./alert.entit
 
 export interface AlertQueryParams extends PaginationParams {
   workspaceId: string;
-  status?: AlertStatus;
-  severity?: AlertSeverity;
-  type?: AlertType;
+  status?: AlertStatus | undefined;
+  severity?: AlertSeverity | undefined;
+  type?: AlertType | undefined;
 }
 
 export interface AlertRepository {
@@ -13,4 +13,3 @@ export interface AlertRepository {
   findByWorkspace(params: AlertQueryParams): Promise<PaginatedResult<Alert>>;
   update(id: string, data: Partial<Alert>): Promise<Alert | null>;
 }
-
