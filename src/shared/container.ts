@@ -60,6 +60,8 @@ import { LogoutUserUseCase } from "../features/auth/application/logout-user.use-
 import { RegisterUserUseCase } from "../features/auth/application/register-user.use-case";
 import { AuthController } from "../features/auth/presentation/http/auth.controller";
 import { createAuthRouter } from "../features/auth/presentation/http/auth.routes";
+import { environment } from "./config/environment";
+import { AppError } from "./domain/errors/app-error";
 import { AuthMiddleware } from "./http/middlewares/auth.middleware";
 import { createSeededInMemoryDatabase } from "./infrastructure/persistence/in-memory-database";
 import {
@@ -73,6 +75,18 @@ import {
   InMemoryUserRepository,
   InMemoryWorkspaceRepository,
 } from "./infrastructure/persistence/in-memory-repositories";
+import { prisma } from "./infrastructure/persistence/prisma.client";
+import {
+  PrismaAlertRepository,
+  PrismaAuditLogRepository,
+  PrismaAutomationRuleRepository,
+  PrismaEmailMessageRepository,
+  PrismaGmailAccountRepository,
+  PrismaGmailOAuthTokenRepository,
+  PrismaSenderProfileRepository,
+  PrismaUserRepository,
+  PrismaWorkspaceRepository,
+} from "./infrastructure/persistence/prisma-repositories";
 import { JwtService } from "./infrastructure/security/jwt.service";
 import { TokenEncryptionService } from "./infrastructure/security/token-encryption.service";
 
@@ -91,17 +105,18 @@ export interface ApplicationContainer {
 }
 
 export function buildContainer(): ApplicationContainer {
-  const database = createSeededInMemoryDatabase();
+  const repositories = buildRepositories();
 
-  const users = new InMemoryUserRepository(database);
-  const workspaces = new InMemoryWorkspaceRepository(database);
-  const auditLogs = new InMemoryAuditLogRepository(database);
-  const gmailAccounts = new InMemoryGmailAccountRepository(database);
-  const gmailOAuthTokens = new InMemoryGmailOAuthTokenRepository(database);
-  const emails = new InMemoryEmailMessageRepository(database);
-  const alerts = new InMemoryAlertRepository(database);
-  const senders = new InMemorySenderProfileRepository(database);
-  const rules = new InMemoryAutomationRuleRepository(database);
+  const users = repositories.users;
+  const workspaces = repositories.workspaces;
+  const auditLogs = repositories.auditLogs;
+  const gmailAccounts = repositories.gmailAccounts;
+  const gmailOAuthTokens = repositories.gmailOAuthTokens;
+  const emails = repositories.emails;
+  const alerts = repositories.alerts;
+  const senders = repositories.senders;
+  const rules = repositories.rules;
+
   const jwtService = new JwtService();
   const tokenEncryptionService = new TokenEncryptionService();
   const gmailTokenVault = new GmailTokenVault(gmailOAuthTokens, tokenEncryptionService);
@@ -117,87 +132,155 @@ export function buildContainer(): ApplicationContainer {
   );
   const authMiddleware = new AuthMiddleware(jwtService);
 
+  return composeApplication({
+    users,
+    workspaces,
+    auditLogs,
+    gmailAccounts,
+    emails,
+    alerts,
+    senders,
+    rules,
+    jwtService,
+    authMiddleware,
+    gmailTokenVault,
+    googleGmailClient,
+    gmailSyncService,
+  });
+}
+
+function buildRepositories() {
+  if (environment.persistenceDriver === "prisma") {
+    if (!environment.databaseUrl) {
+      throw new AppError("DATABASE_URL es obligatorio cuando PERSISTENCE_DRIVER=prisma.", 500, "DATABASE_URL_REQUIRED");
+    }
+
+    return {
+      users: new PrismaUserRepository(prisma),
+      workspaces: new PrismaWorkspaceRepository(prisma),
+      auditLogs: new PrismaAuditLogRepository(prisma),
+      gmailAccounts: new PrismaGmailAccountRepository(prisma),
+      gmailOAuthTokens: new PrismaGmailOAuthTokenRepository(prisma),
+      emails: new PrismaEmailMessageRepository(prisma),
+      alerts: new PrismaAlertRepository(prisma),
+      senders: new PrismaSenderProfileRepository(prisma),
+      rules: new PrismaAutomationRuleRepository(prisma),
+    };
+  }
+
+  const database = createSeededInMemoryDatabase();
+
+  return {
+    users: new InMemoryUserRepository(database),
+    workspaces: new InMemoryWorkspaceRepository(database),
+    auditLogs: new InMemoryAuditLogRepository(database),
+    gmailAccounts: new InMemoryGmailAccountRepository(database),
+    gmailOAuthTokens: new InMemoryGmailOAuthTokenRepository(database),
+    emails: new InMemoryEmailMessageRepository(database),
+    alerts: new InMemoryAlertRepository(database),
+    senders: new InMemorySenderProfileRepository(database),
+    rules: new InMemoryAutomationRuleRepository(database),
+  };
+}
+
+interface ComposedApplicationDependencies {
+  users: InMemoryUserRepository | PrismaUserRepository;
+  workspaces: InMemoryWorkspaceRepository | PrismaWorkspaceRepository;
+  auditLogs: InMemoryAuditLogRepository | PrismaAuditLogRepository;
+  gmailAccounts: InMemoryGmailAccountRepository | PrismaGmailAccountRepository;
+  emails: InMemoryEmailMessageRepository | PrismaEmailMessageRepository;
+  alerts: InMemoryAlertRepository | PrismaAlertRepository;
+  senders: InMemorySenderProfileRepository | PrismaSenderProfileRepository;
+  rules: InMemoryAutomationRuleRepository | PrismaAutomationRuleRepository;
+  jwtService: JwtService;
+  authMiddleware: AuthMiddleware;
+  gmailTokenVault: GmailTokenVault;
+  googleGmailClient: GoogleGmailClient;
+  gmailSyncService: GmailSyncService;
+}
+
+function composeApplication(dependencies: ComposedApplicationDependencies): ApplicationContainer {
   const authController = new AuthController(
-    new RegisterUserUseCase(users, workspaces, auditLogs, jwtService),
-    new LoginUserUseCase(users, workspaces, auditLogs, jwtService),
-    new GetAuthenticatedUserUseCase(users, workspaces),
-    new LogoutUserUseCase(auditLogs),
+    new RegisterUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
+    new LoginUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
+    new GetAuthenticatedUserUseCase(dependencies.users, dependencies.workspaces),
+    new LogoutUserUseCase(dependencies.auditLogs),
   );
 
   const workspaceController = new WorkspaceController(
-    new GetCurrentWorkspaceUseCase(workspaces),
-    new UpdateCurrentWorkspaceUseCase(workspaces, auditLogs),
+    new GetCurrentWorkspaceUseCase(dependencies.workspaces),
+    new UpdateCurrentWorkspaceUseCase(dependencies.workspaces, dependencies.auditLogs),
   );
 
   const gmailAccountController = new GmailAccountController(
-    new ListGmailAccountsUseCase(gmailAccounts),
-    new StartGmailOAuthUseCase(auditLogs, googleGmailClient),
+    new ListGmailAccountsUseCase(dependencies.gmailAccounts),
+    new StartGmailOAuthUseCase(dependencies.auditLogs, dependencies.googleGmailClient),
     new GetGmailOAuthStatusUseCase(),
     new HandleGmailOAuthCallbackUseCase(
-      auditLogs,
-      gmailAccounts,
-      gmailTokenVault,
-      googleGmailClient,
-      gmailSyncService,
+      dependencies.auditLogs,
+      dependencies.gmailAccounts,
+      dependencies.gmailTokenVault,
+      dependencies.googleGmailClient,
+      dependencies.gmailSyncService,
     ),
-    new SyncGmailAccountUseCase(gmailAccounts, auditLogs, gmailSyncService),
-    new ReconnectGmailAccountUseCase(gmailAccounts, auditLogs, googleGmailClient),
-    new DisconnectGmailAccountUseCase(gmailAccounts, auditLogs, gmailTokenVault),
+    new SyncGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailSyncService),
+    new ReconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.googleGmailClient),
+    new DisconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailTokenVault),
   );
 
   const emailController = new EmailController(
-    new ListEmailsUseCase(emails),
-    new GetEmailDetailUseCase(emails),
-    new CorrectEmailClassificationUseCase(emails, auditLogs),
-    new MarkEmailReviewedUseCase(emails, auditLogs),
-    new MarkEmailImportantUseCase(emails, auditLogs),
+    new ListEmailsUseCase(dependencies.emails),
+    new GetEmailDetailUseCase(dependencies.emails),
+    new CorrectEmailClassificationUseCase(dependencies.emails, dependencies.auditLogs),
+    new MarkEmailReviewedUseCase(dependencies.emails, dependencies.auditLogs),
+    new MarkEmailImportantUseCase(dependencies.emails, dependencies.auditLogs),
   );
 
   const alertController = new AlertController(
-    new ListAlertsUseCase(alerts),
-    new GetAlertDetailUseCase(alerts),
-    new ResolveAlertUseCase(alerts, auditLogs),
-    new IgnoreAlertUseCase(alerts, auditLogs),
+    new ListAlertsUseCase(dependencies.alerts),
+    new GetAlertDetailUseCase(dependencies.alerts),
+    new ResolveAlertUseCase(dependencies.alerts, dependencies.auditLogs),
+    new IgnoreAlertUseCase(dependencies.alerts, dependencies.auditLogs),
   );
 
   const senderController = new SenderController(
-    new ListSendersUseCase(senders),
-    new GetSenderDetailUseCase(senders),
-    new TrustSenderUseCase(senders, auditLogs),
-    new MarkSenderSuspiciousUseCase(senders, auditLogs),
-    new ListSenderEmailsUseCase(senders, emails),
+    new ListSendersUseCase(dependencies.senders),
+    new GetSenderDetailUseCase(dependencies.senders),
+    new TrustSenderUseCase(dependencies.senders, dependencies.auditLogs),
+    new MarkSenderSuspiciousUseCase(dependencies.senders, dependencies.auditLogs),
+    new ListSenderEmailsUseCase(dependencies.senders, dependencies.emails),
   );
 
   const ruleController = new RuleController(
-    new ListRulesUseCase(rules),
-    new GetRuleDetailUseCase(rules),
-    new CreateRuleUseCase(rules, auditLogs),
-    new UpdateRuleUseCase(rules, auditLogs),
-    new DeleteRuleUseCase(rules, auditLogs),
-    new SetRuleEnabledUseCase(rules, auditLogs),
+    new ListRulesUseCase(dependencies.rules),
+    new GetRuleDetailUseCase(dependencies.rules),
+    new CreateRuleUseCase(dependencies.rules, dependencies.auditLogs),
+    new UpdateRuleUseCase(dependencies.rules, dependencies.auditLogs),
+    new DeleteRuleUseCase(dependencies.rules, dependencies.auditLogs),
+    new SetRuleEnabledUseCase(dependencies.rules, dependencies.auditLogs),
   );
 
   const analyticsController = new AnalyticsController(
-    new GetAnalyticsSummaryUseCase(gmailAccounts, emails, alerts),
-    new GetEmailsByDayUseCase(emails),
-    new GetCategoryDistributionUseCase(emails),
-    new GetTopSendersUseCase(senders),
-    new GetAccountAnalyticsUseCase(gmailAccounts),
+    new GetAnalyticsSummaryUseCase(dependencies.gmailAccounts, dependencies.emails, dependencies.alerts),
+    new GetEmailsByDayUseCase(dependencies.emails),
+    new GetCategoryDistributionUseCase(dependencies.emails),
+    new GetTopSendersUseCase(dependencies.senders),
+    new GetAccountAnalyticsUseCase(dependencies.gmailAccounts),
   );
 
-  const auditController = new AuditController(new ListAuditLogsUseCase(auditLogs));
+  const auditController = new AuditController(new ListAuditLogsUseCase(dependencies.auditLogs));
 
   return {
     routes: {
-      auth: createAuthRouter(authController, authMiddleware),
-      workspace: createWorkspaceRouter(workspaceController, authMiddleware),
-      gmail: createGmailAccountRouter(gmailAccountController, authMiddleware),
-      emails: createEmailRouter(emailController, authMiddleware),
-      alerts: createAlertRouter(alertController, authMiddleware),
-      senders: createSenderRouter(senderController, authMiddleware),
-      rules: createRuleRouter(ruleController, authMiddleware),
-      analytics: createAnalyticsRouter(analyticsController, authMiddleware),
-      audit: createAuditRouter(auditController, authMiddleware),
+      auth: createAuthRouter(authController, dependencies.authMiddleware),
+      workspace: createWorkspaceRouter(workspaceController, dependencies.authMiddleware),
+      gmail: createGmailAccountRouter(gmailAccountController, dependencies.authMiddleware),
+      emails: createEmailRouter(emailController, dependencies.authMiddleware),
+      alerts: createAlertRouter(alertController, dependencies.authMiddleware),
+      senders: createSenderRouter(senderController, dependencies.authMiddleware),
+      rules: createRuleRouter(ruleController, dependencies.authMiddleware),
+      analytics: createAnalyticsRouter(analyticsController, dependencies.authMiddleware),
+      audit: createAuditRouter(auditController, dependencies.authMiddleware),
     },
   };
 }
