@@ -402,6 +402,7 @@ Falta:
 - variables de entorno por ambiente.
 - script de migracion en deploy.
 - healthcheck container.
+- estrategia de backups y restauracion PostgreSQL.
 - documentar despliegue.
 
 ### 29. Calidad y CI
@@ -440,4 +441,3 @@ Crear o ampliar:
 - Rate limiting activo.
 - Logs de sync disponibles.
 - Documentacion de ejecucion completa.
-

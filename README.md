@@ -184,3 +184,7 @@ Mas detalle en [docs/api.md](docs/api.md).
 - PostgreSQL/Prisma persiste usuarios, workspaces, tokens cifrados, correos, alertas, reglas, remitentes, settings y auditoria.
 
 Ver [docs/security.md](docs/security.md).
+
+## Plan de desarrollo
+
+El plan vivo de desarrollo backend esta en [docs/backend-development-plan.md](docs/backend-development-plan.md). Ese documento ordena las fases de trabajo, criterios de terminado, ramas recomendadas y relacion con el backlog de [todo.md](todo.md).
