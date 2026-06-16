@@ -3,13 +3,21 @@ import type { RequestHandler } from "express";
 import { asyncHandler } from "../../../../shared/http/async-handler";
 import { getAuthContext } from "../../../../shared/http/request-context";
 import type { DisconnectGmailAccountUseCase } from "../../application/disconnect-gmail-account.use-case";
+import type { GetGmailSyncLogDetailUseCase } from "../../application/get-gmail-sync-log-detail.use-case";
 import type { GetGmailOAuthStatusUseCase } from "../../application/get-gmail-oauth-status.use-case";
 import type { HandleGmailOAuthCallbackUseCase } from "../../application/handle-gmail-oauth-callback.use-case";
 import type { ListGmailAccountsUseCase } from "../../application/list-gmail-accounts.use-case";
+import type { ListGmailSyncLogsUseCase } from "../../application/list-gmail-sync-logs.use-case";
 import type { ReconnectGmailAccountUseCase } from "../../application/reconnect-gmail-account.use-case";
 import type { StartGmailOAuthUseCase } from "../../application/start-gmail-oauth.use-case";
 import type { SyncGmailAccountUseCase } from "../../application/sync-gmail-account.use-case";
-import { gmailAccountIdParamsDto, oauthCallbackQueryDto, oauthStatusQueryDto } from "./gmail-account.dtos";
+import {
+  gmailAccountIdParamsDto,
+  gmailSyncLogIdParamsDto,
+  listGmailSyncLogsQueryDto,
+  oauthCallbackQueryDto,
+  oauthStatusQueryDto,
+} from "./gmail-account.dtos";
 
 export class GmailAccountController {
   public constructor(
@@ -20,6 +28,8 @@ export class GmailAccountController {
     private readonly syncGmailAccount: SyncGmailAccountUseCase,
     private readonly reconnectGmailAccount: ReconnectGmailAccountUseCase,
     private readonly disconnectGmailAccount: DisconnectGmailAccountUseCase,
+    private readonly listGmailSyncLogs: ListGmailSyncLogsUseCase,
+    private readonly getGmailSyncLogDetail: GetGmailSyncLogDetailUseCase,
   ) {}
 
   public readonly list: RequestHandler = asyncHandler(async (request, response) => {
@@ -47,6 +57,22 @@ export class GmailAccountController {
   public readonly sync: RequestHandler = asyncHandler(async (request, response) => {
     const { id } = gmailAccountIdParamsDto.parse(request.params);
     const data = await this.syncGmailAccount.execute(getAuthContext(request), id);
+    response.json({ data });
+  });
+
+  public readonly listSyncLogs: RequestHandler = asyncHandler(async (request, response) => {
+    const { id } = gmailAccountIdParamsDto.parse(request.params);
+    const query = listGmailSyncLogsQueryDto.parse(request.query);
+    const result = await this.listGmailSyncLogs.execute(getAuthContext(request), id, query);
+    response.json({
+      data: result.data,
+      pagination: result.pagination,
+    });
+  });
+
+  public readonly syncLogDetail: RequestHandler = asyncHandler(async (request, response) => {
+    const { id, logId } = gmailSyncLogIdParamsDto.parse(request.params);
+    const data = await this.getGmailSyncLogDetail.execute(getAuthContext(request), id, logId);
     response.json({ data });
   });
 

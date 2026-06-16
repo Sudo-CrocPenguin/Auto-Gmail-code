@@ -39,9 +39,16 @@ La migracion inicial esta en:
 prisma/migrations/20260615190000_initial_schema/migration.sql
 ```
 
+La migracion de logs de sincronizacion Gmail esta en:
+
+```txt
+prisma/migrations/20260616153000_add_gmail_sync_logs/migration.sql
+```
+
+La tabla `gmail_sync_logs` guarda el resultado operativo de cada sincronizacion por cuenta Gmail: estado, tiempos, conteos, error y metadata. Sirve para que la UI muestre historial, fallos y avances sin depender solo de auditoria.
+
 Para entornos productivos:
 
 ```bash
 npm run db:deploy
 ```
-

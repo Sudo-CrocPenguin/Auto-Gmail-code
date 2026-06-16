@@ -15,6 +15,8 @@ import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
+import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
+import type { GmailSyncLogQueryParams, GmailSyncLogRepository } from "../../../features/gmail-accounts/domain/gmail-sync-log.repository";
 import type { AutomationRule, RuleAction, RuleCondition } from "../../../features/rules/domain/automation-rule.entity";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
@@ -102,6 +104,22 @@ function mapGmailOAuthToken(token: Prisma.GmailOAuthTokenGetPayload<object>): Gm
     expiryDate: token.expiryDate === null ? null : Number(token.expiryDate),
     createdAt: toIsoRequired(token.createdAt),
     updatedAt: toIsoRequired(token.updatedAt),
+  };
+}
+
+function mapGmailSyncLog(log: Prisma.GmailSyncLogGetPayload<object>): GmailSyncLog {
+  return {
+    id: log.id,
+    workspaceId: log.workspaceId,
+    gmailAccountId: log.gmailAccountId,
+    status: log.status as GmailSyncLog["status"],
+    startedAt: toIsoRequired(log.startedAt),
+    finishedAt: toIso(log.finishedAt),
+    fetchedMessages: log.fetchedMessages,
+    createdMessages: log.createdMessages,
+    updatedMessages: log.updatedMessages,
+    errorMessage: log.errorMessage,
+    metadata: fromJson<Record<string, unknown>>(log.metadata, {}),
   };
 }
 
@@ -378,6 +396,80 @@ export class PrismaGmailOAuthTokenRepository implements GmailOAuthTokenRepositor
   public async deleteByAccountId(gmailAccountId: string): Promise<boolean> {
     await this.client.gmailOAuthToken.delete({ where: { gmailAccountId } }).catch(() => null);
     return true;
+  }
+}
+
+export class PrismaGmailSyncLogRepository implements GmailSyncLogRepository {
+  public constructor(private readonly client: PrismaClient) {}
+
+  public async create(log: GmailSyncLog): Promise<GmailSyncLog> {
+    const createdLog = await this.client.gmailSyncLog.create({
+      data: this.toPersistence(log),
+    });
+    return mapGmailSyncLog(createdLog);
+  }
+
+  public async findById(id: string): Promise<GmailSyncLog | null> {
+    const log = await this.client.gmailSyncLog.findUnique({ where: { id } });
+    return log ? mapGmailSyncLog(log) : null;
+  }
+
+  public async findByAccount(params: GmailSyncLogQueryParams) {
+    const where: Prisma.GmailSyncLogWhereInput = {
+      workspaceId: params.workspaceId,
+      gmailAccountId: params.gmailAccountId,
+    };
+    if (params.status) where.status = params.status;
+
+    const [logs, total] = await Promise.all([
+      this.client.gmailSyncLog.findMany({
+        where,
+        orderBy: { startedAt: "desc" },
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+      }),
+      this.client.gmailSyncLog.count({ where }),
+    ]);
+
+    return {
+      data: logs.map(mapGmailSyncLog),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
+  public async update(id: string, data: Partial<GmailSyncLog>): Promise<GmailSyncLog | null> {
+    const updateData: Prisma.GmailSyncLogUpdateInput = {};
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.finishedAt !== undefined) updateData.finishedAt = toDate(data.finishedAt);
+    if (data.fetchedMessages !== undefined) updateData.fetchedMessages = data.fetchedMessages;
+    if (data.createdMessages !== undefined) updateData.createdMessages = data.createdMessages;
+    if (data.updatedMessages !== undefined) updateData.updatedMessages = data.updatedMessages;
+    if (data.errorMessage !== undefined) updateData.errorMessage = data.errorMessage;
+    if (data.metadata !== undefined) updateData.metadata = toJson(data.metadata);
+
+    const log = await this.client.gmailSyncLog.update({ where: { id }, data: updateData }).catch(() => null);
+    return log ? mapGmailSyncLog(log) : null;
+  }
+
+  private toPersistence(log: GmailSyncLog): Prisma.GmailSyncLogUncheckedCreateInput {
+    return {
+      id: log.id,
+      workspaceId: log.workspaceId,
+      gmailAccountId: log.gmailAccountId,
+      status: log.status,
+      startedAt: toDateRequired(log.startedAt),
+      finishedAt: toDate(log.finishedAt),
+      fetchedMessages: log.fetchedMessages,
+      createdMessages: log.createdMessages,
+      updatedMessages: log.updatedMessages,
+      errorMessage: log.errorMessage,
+      metadata: toJson(log.metadata),
+    };
   }
 }
 

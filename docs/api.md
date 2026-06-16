@@ -94,6 +94,20 @@ Cuando Google OAuth esta configurado, este endpoint:
 
 Solicita sincronizacion manual. Si la cuenta tiene credenciales OAuth guardadas, usa Gmail API real. Si la cuenta pertenece a los datos demo y no tiene tokens, ejecuta el comportamiento demo.
 
+### GET /api/gmail/accounts/:id/sync-logs
+
+Lista el historial paginado de sincronizaciones de una cuenta Gmail del workspace.
+
+Query params:
+
+- `page`
+- `limit`
+- `status`: `RUNNING`, `COMPLETED`, `FAILED` o `SKIPPED`.
+
+### GET /api/gmail/accounts/:id/sync-logs/:logId
+
+Devuelve el detalle de un log de sincronizacion. Incluye estado, fecha de inicio, fecha de fin, mensajes obtenidos, mensajes creados, mensajes actualizados, error si existe y metadata operativa.
+
 ### POST /api/gmail/accounts/:id/reconnect
 
 Inicia reconexion OAuth o recupera estado demo si no hay credenciales.

@@ -124,34 +124,10 @@ El sync actual cubre mensajes recientes e incremental basico. Falta:
 - Manejar `nextPageToken` en `users.history.list`.
 - Persistir cursor incremental con mas control.
 - Evitar duplicados de alertas derivadas.
-- Evitar incrementar remitentes dos veces cuando un correo ya existe.
-- Guardar resumen de cada sync en una tabla propia.
-- Exponer logs resumidos para UI.
 - Permitir sync por rango de fechas.
 - Permitir sync inicial profundo por lotes.
 
-### 8. Tabla de logs de sincronizacion
-
-Crear entidad `SyncLog` o `GmailSyncJob`:
-
-- `id`
-- `workspaceId`
-- `gmailAccountId`
-- `status`
-- `startedAt`
-- `finishedAt`
-- `fetchedMessages`
-- `createdMessages`
-- `updatedMessages`
-- `errorMessage`
-- `metadata`
-
-Endpoints sugeridos:
-
-- `GET /api/gmail/accounts/:id/sync-logs`
-- `GET /api/gmail/accounts/:id/sync-logs/:logId`
-
-### 9. Clasificacion mas precisa
+### 8. Clasificacion mas precisa
 
 El clasificador actual es heuristico. Falta:
 
@@ -166,7 +142,7 @@ El clasificador actual es heuristico. Falta:
 - Permitir feedback de usuario para mejorar reglas futuras.
 - Definir si se usara IA despues y bajo que permisos.
 
-### 10. Aplicacion real de reglas automaticas
+### 9. Aplicacion real de reglas automaticas
 
 El CRUD de reglas existe, pero falta el motor:
 
@@ -183,7 +159,7 @@ El CRUD de reglas existe, pero falta el motor:
 - Registrar auditoria por regla aplicada.
 - Exponer reglas coincidentes en detalle de correo.
 
-### 11. Adjuntos
+### 10. Adjuntos
 
 Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implementar:
 
@@ -196,7 +172,7 @@ Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implem
   - `GET /api/emails/:id/attachments/:attachmentId`
 - Evitar guardar adjuntos completos en DB salvo decision explicita.
 
-### 12. HTML de correos mas seguro
+### 11. HTML de correos mas seguro
 
 Ya se sanitiza HTML, pero falta reforzar:
 
@@ -206,7 +182,7 @@ Ya se sanitiza HTML, pero falta reforzar:
 - Reescribir links para abrir con advertencia si el risk score es alto.
 - Guardar `bodyText` separado de `bodyHtml` para busqueda y fallback.
 
-### 13. Busqueda avanzada
+### 12. Busqueda avanzada
 
 La busqueda actual funciona para MVP. Falta:
 
@@ -216,7 +192,7 @@ La busqueda actual funciona para MVP. Falta:
 - Ordenamiento por scores desde JSONB o columnas materializadas.
 - Paginacion estable por cursor para bandejas grandes.
 
-### 14. RBAC y colaboradores
+### 13. RBAC y colaboradores
 
 Actualmente el rol viene en usuario, pero falta modelo completo:
 
@@ -236,7 +212,7 @@ Actualmente el rol viene en usuario, pero falta modelo completo:
   - `PATCH /api/workspaces/current/members/:id`
   - `DELETE /api/workspaces/current/members/:id`
 
-### 15. Gestion de perfil y password
+### 14. Gestion de perfil y password
 
 Faltan endpoints:
 
@@ -246,7 +222,7 @@ Faltan endpoints:
 - `POST /api/auth/reset-password`
 - invalidacion de tokens tras cambio de password.
 
-### 16. Sesiones
+### 15. Sesiones
 
 El JWT actual es stateless. Falta definir:
 
@@ -257,7 +233,7 @@ El JWT actual es stateless. Falta definir:
 - Lista de dispositivos activos.
 - Expiracion configurable.
 
-### 17. Auditoria mas fuerte
+### 16. Auditoria mas fuerte
 
 La auditoria existe. Falta mejorar:
 
@@ -268,7 +244,7 @@ La auditoria existe. Falta mejorar:
 - Retencion automatica segun settings.
 - Endpoint de exportacion.
 
-### 18. Observabilidad
+### 17. Observabilidad
 
 Agregar:
 
@@ -286,7 +262,7 @@ Agregar:
   - Prisma conectado,
   - config Gmail presente.
 
-### 19. Manejo centralizado de errores Gmail API
+### 18. Manejo centralizado de errores Gmail API
 
 Agregar traductor de errores:
 
@@ -298,7 +274,7 @@ Agregar traductor de errores:
 
 ## P2 - Mejoras importantes despues del front MVP
 
-### 20. Gmail Pub/Sub Watch
+### 19. Gmail Pub/Sub Watch
 
 Para tiempo real real:
 
@@ -310,7 +286,7 @@ Para tiempo real real:
 - Renovar watch antes de expirar.
 - Usar Gmail history API desde `historyId`.
 
-### 21. Cola de trabajos
+### 20. Cola de trabajos
 
 La sincronizacion deberia salir del request HTTP:
 
@@ -324,7 +300,7 @@ La sincronizacion deberia salir del request HTTP:
 - Reintentos con backoff.
 - Idempotencia por job.
 
-### 22. Notificaciones
+### 21. Notificaciones
 
 Definir:
 
@@ -334,7 +310,7 @@ Definir:
 - Notificaciones por alerta critica.
 - Preferencias por usuario/workspace.
 
-### 23. Exportacion de datos
+### 22. Exportacion de datos
 
 Endpoints posibles:
 
@@ -351,7 +327,7 @@ Considerar:
 - permisos,
 - auditoria.
 
-### 24. Eliminacion y retencion de datos
+### 23. Eliminacion y retencion de datos
 
 Falta:
 
@@ -362,7 +338,7 @@ Falta:
 - Borrado de cuenta de usuario.
 - Revocacion OAuth al desconectar Gmail.
 
-### 25. Seguridad avanzada
+### 24. Seguridad avanzada
 
 - MFA.
 - Deteccion de login sospechoso.
@@ -372,7 +348,7 @@ Falta:
 - CSRF si se usan cookies.
 - CSP para frontend futuro.
 
-### 26. Versionado de API
+### 25. Versionado de API
 
 Antes de produccion publica:
 
@@ -381,7 +357,7 @@ Antes de produccion publica:
 - Politica de deprecacion.
 - Compatibilidad frontend/back.
 
-### 27. Docker y despliegue
+### 26. Docker y despliegue
 
 Falta:
 
@@ -393,7 +369,7 @@ Falta:
 - estrategia de backups y restauracion PostgreSQL.
 - documentar despliegue.
 
-### 28. Calidad y CI
+### 27. Calidad y CI
 
 Agregar:
 
@@ -405,7 +381,7 @@ Agregar:
 - Escaneo de dependencias.
 - Validacion de migraciones.
 
-### 29. Documentacion operativa avanzada
+### 28. Documentacion operativa avanzada
 
 Crear o ampliar:
 

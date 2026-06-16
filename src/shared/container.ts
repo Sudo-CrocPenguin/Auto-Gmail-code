@@ -25,9 +25,11 @@ import { EmailController } from "../features/emails/presentation/http/email.cont
 import { createEmailRouter } from "../features/emails/presentation/http/email.routes";
 import { DisconnectGmailAccountUseCase } from "../features/gmail-accounts/application/disconnect-gmail-account.use-case";
 import { GetGmailOAuthStatusUseCase } from "../features/gmail-accounts/application/get-gmail-oauth-status.use-case";
+import { GetGmailSyncLogDetailUseCase } from "../features/gmail-accounts/application/get-gmail-sync-log-detail.use-case";
 import { GmailSyncService } from "../features/gmail-accounts/application/gmail-sync.service";
 import { HandleGmailOAuthCallbackUseCase } from "../features/gmail-accounts/application/handle-gmail-oauth-callback.use-case";
 import { ListGmailAccountsUseCase } from "../features/gmail-accounts/application/list-gmail-accounts.use-case";
+import { ListGmailSyncLogsUseCase } from "../features/gmail-accounts/application/list-gmail-sync-logs.use-case";
 import { OAuthStateService } from "../features/gmail-accounts/application/oauth-state.service";
 import { ReconnectGmailAccountUseCase } from "../features/gmail-accounts/application/reconnect-gmail-account.use-case";
 import { StartGmailOAuthUseCase } from "../features/gmail-accounts/application/start-gmail-oauth.use-case";
@@ -77,6 +79,7 @@ import {
   InMemoryEmailMessageRepository,
   InMemoryGmailAccountRepository,
   InMemoryGmailOAuthTokenRepository,
+  InMemoryGmailSyncLogRepository,
   InMemorySenderProfileRepository,
   InMemoryWorkspaceSettingsRepository,
   InMemoryUserRepository,
@@ -90,6 +93,7 @@ import {
   PrismaEmailMessageRepository,
   PrismaGmailAccountRepository,
   PrismaGmailOAuthTokenRepository,
+  PrismaGmailSyncLogRepository,
   PrismaSenderProfileRepository,
   PrismaWorkspaceSettingsRepository,
   PrismaUserRepository,
@@ -121,6 +125,7 @@ export function buildContainer(): ApplicationContainer {
   const auditLogs = repositories.auditLogs;
   const gmailAccounts = repositories.gmailAccounts;
   const gmailOAuthTokens = repositories.gmailOAuthTokens;
+  const gmailSyncLogs = repositories.gmailSyncLogs;
   const emails = repositories.emails;
   const alerts = repositories.alerts;
   const senders = repositories.senders;
@@ -138,6 +143,7 @@ export function buildContainer(): ApplicationContainer {
     alerts,
     senders,
     auditLogs,
+    gmailSyncLogs,
     gmailTokenVault,
     googleGmailClient,
   );
@@ -162,6 +168,7 @@ export function buildContainer(): ApplicationContainer {
     workspaces,
     auditLogs,
     gmailAccounts,
+    gmailSyncLogs,
     emails,
     alerts,
     senders,
@@ -191,6 +198,7 @@ function buildRepositories() {
       auditLogs: new PrismaAuditLogRepository(prisma),
       gmailAccounts: new PrismaGmailAccountRepository(prisma),
       gmailOAuthTokens: new PrismaGmailOAuthTokenRepository(prisma),
+      gmailSyncLogs: new PrismaGmailSyncLogRepository(prisma),
       emails: new PrismaEmailMessageRepository(prisma),
       alerts: new PrismaAlertRepository(prisma),
       senders: new PrismaSenderProfileRepository(prisma),
@@ -207,6 +215,7 @@ function buildRepositories() {
     auditLogs: new InMemoryAuditLogRepository(database),
     gmailAccounts: new InMemoryGmailAccountRepository(database),
     gmailOAuthTokens: new InMemoryGmailOAuthTokenRepository(database),
+    gmailSyncLogs: new InMemoryGmailSyncLogRepository(database),
     emails: new InMemoryEmailMessageRepository(database),
     alerts: new InMemoryAlertRepository(database),
     senders: new InMemorySenderProfileRepository(database),
@@ -220,6 +229,7 @@ interface ComposedApplicationDependencies {
   workspaces: InMemoryWorkspaceRepository | PrismaWorkspaceRepository;
   auditLogs: InMemoryAuditLogRepository | PrismaAuditLogRepository;
   gmailAccounts: InMemoryGmailAccountRepository | PrismaGmailAccountRepository;
+  gmailSyncLogs: InMemoryGmailSyncLogRepository | PrismaGmailSyncLogRepository;
   emails: InMemoryEmailMessageRepository | PrismaEmailMessageRepository;
   alerts: InMemoryAlertRepository | PrismaAlertRepository;
   senders: InMemorySenderProfileRepository | PrismaSenderProfileRepository;
@@ -265,7 +275,12 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       dependencies.gmailSyncService,
       dependencies.oauthStateService,
     ),
-    new SyncGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailSyncService),
+    new SyncGmailAccountUseCase(
+      dependencies.gmailAccounts,
+      dependencies.auditLogs,
+      dependencies.gmailSyncService,
+      dependencies.gmailSyncLogs,
+    ),
     new ReconnectGmailAccountUseCase(
       dependencies.gmailAccounts,
       dependencies.auditLogs,
@@ -273,6 +288,8 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       dependencies.oauthStateService,
     ),
     new DisconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailTokenVault),
+    new ListGmailSyncLogsUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
+    new GetGmailSyncLogDetailUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
   );
 
   const emailController = new EmailController(

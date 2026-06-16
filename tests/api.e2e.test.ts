@@ -56,6 +56,41 @@ describe("Auto-Gmail-code API", () => {
     expect(callback.headers.location).toContain("oauth=success");
   });
 
+  it("sincroniza una cuenta Gmail y expone logs de sincronizacion", async () => {
+    const token = await login();
+
+    const accounts = await request(app)
+      .get("/api/gmail/accounts")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(accounts.status).toBe(200);
+    const accountId = accounts.body.data[0].id as string;
+
+    const sync = await request(app)
+      .post(`/api/gmail/accounts/${accountId}/sync`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(sync.status).toBe(200);
+    expect(sync.body.data.id).toBe(accountId);
+
+    const logs = await request(app)
+      .get(`/api/gmail/accounts/${accountId}/sync-logs`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(logs.status).toBe(200);
+    expect(logs.body.data.length).toBeGreaterThan(0);
+    expect(logs.body.data[0].status).toBe("COMPLETED");
+    expect(logs.body.data[0].gmailAccountId).toBe(accountId);
+
+    const logId = logs.body.data[0].id as string;
+    const detail = await request(app)
+      .get(`/api/gmail/accounts/${accountId}/sync-logs/${logId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(detail.status).toBe(200);
+    expect(detail.body.data.id).toBe(logId);
+  });
+
   it("lista correos filtrados y corrige clasificacion manualmente", async () => {
     const token = await login();
 

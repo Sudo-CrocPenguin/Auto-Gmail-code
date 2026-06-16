@@ -7,6 +7,7 @@ import type { EmailMessageRepository } from "../../emails/domain/email-message.r
 import type { SenderProfileRepository } from "../../senders/domain/sender-profile.repository";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import type { GmailSyncLogRepository } from "../domain/gmail-sync-log.repository";
 import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
 import { GoogleGmailClient, type SyncedGmailMessage } from "../infrastructure/google-gmail.client";
 import { classifyGmailEmail } from "./gmail-email-classifier";
@@ -20,6 +21,7 @@ export interface GmailSyncResult {
   account: GmailAccount;
   fetchedMessages: number;
   createdMessages: number;
+  updatedMessages: number;
 }
 
 export class GmailSyncService {
@@ -29,6 +31,7 @@ export class GmailSyncService {
     private readonly alerts: AlertRepository,
     private readonly senders: SenderProfileRepository,
     private readonly auditLogs: AuditLogRepository,
+    private readonly syncLogs: GmailSyncLogRepository,
     private readonly tokenVault: GmailTokenVault,
     private readonly gmailClient: GoogleGmailClient,
   ) {}
@@ -38,6 +41,24 @@ export class GmailSyncService {
     if (!credentials?.refresh_token && !credentials?.access_token) {
       return null;
     }
+
+    const startedAt = new Date().toISOString();
+    const syncLog = await this.syncLogs.create({
+      id: randomUUID(),
+      workspaceId: actor.workspaceId,
+      gmailAccountId: account.id,
+      status: "RUNNING",
+      startedAt,
+      finishedAt: null,
+      fetchedMessages: 0,
+      createdMessages: 0,
+      updatedMessages: 0,
+      errorMessage: null,
+      metadata: {
+        previousStatus: account.status,
+        mode: account.historyId ? "incremental" : "recent",
+      },
+    });
 
     await this.gmailAccounts.update(account.id, {
       status: "SYNCING",
@@ -51,6 +72,7 @@ export class GmailSyncService {
         : await this.gmailClient.fetchRecentMessages(credentials);
 
       let createdMessages = 0;
+      let updatedMessages = 0;
       for (const gmailMessage of gmailMessages) {
         const upsertResult = await this.emails.upsertByGmailMessageId(
           this.mapMessage(actor.workspaceId, account, gmailMessage),
@@ -59,9 +81,10 @@ export class GmailSyncService {
         if (upsertResult.created) {
           createdMessages += 1;
           await this.createDerivedAlert(upsertResult.email);
+          await this.upsertSender(actor.workspaceId, upsertResult.email);
+        } else {
+          updatedMessages += 1;
         }
-
-        await this.upsertSender(actor.workspaceId, upsertResult.email);
       }
 
       const updatedAccount = await this.gmailAccounts.update(account.id, {
@@ -85,15 +108,30 @@ export class GmailSyncService {
         metadata: {
           fetchedMessages: gmailMessages.length,
           createdMessages,
+          updatedMessages,
           messagesTotal: profile.messagesTotal,
         },
         createdAt: new Date().toISOString(),
+      });
+
+      await this.syncLogs.update(syncLog.id, {
+        status: "COMPLETED",
+        finishedAt: new Date().toISOString(),
+        fetchedMessages: gmailMessages.length,
+        createdMessages,
+        updatedMessages,
+        metadata: {
+          ...syncLog.metadata,
+          messagesTotal: profile.messagesTotal,
+          historyId: profile.historyId,
+        },
       });
 
       return {
         account: updatedAccount ?? account,
         fetchedMessages: gmailMessages.length,
         createdMessages,
+        updatedMessages,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido en Gmail API.";
@@ -115,10 +153,17 @@ export class GmailSyncService {
         createdAt: new Date().toISOString(),
       });
 
+      await this.syncLogs.update(syncLog.id, {
+        status: "FAILED",
+        finishedAt: new Date().toISOString(),
+        errorMessage: message,
+      });
+
       return {
         account: updatedAccount ?? account,
         fetchedMessages: 0,
         createdMessages: 0,
+        updatedMessages: 0,
       };
     }
   }

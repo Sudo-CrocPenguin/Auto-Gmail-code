@@ -6,6 +6,7 @@ import type { User } from "../../../features/auth/domain/user.entity";
 import type { EmailMessage } from "../../../features/emails/domain/email-message.entity";
 import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail-account.entity";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
+import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
 import type { AutomationRule } from "../../../features/rules/domain/automation-rule.entity";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
 import type { WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
@@ -17,6 +18,7 @@ export interface InMemoryDatabase {
   workspaceSettings: Record<string, WorkspaceSettings>;
   gmailAccounts: GmailAccount[];
   gmailOAuthTokens: GmailOAuthToken[];
+  gmailSyncLogs: GmailSyncLog[];
   emails: EmailMessage[];
   alerts: Alert[];
   senders: SenderProfile[];
@@ -101,6 +103,24 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
       },
     ],
     gmailOAuthTokens: [],
+    gmailSyncLogs: [
+      {
+        id: "sync_log_primary_demo",
+        workspaceId,
+        gmailAccountId: primaryGmailId,
+        status: "COMPLETED",
+        startedAt: "2026-06-15T09:54:30.000Z",
+        finishedAt: "2026-06-15T09:55:00.000Z",
+        fetchedMessages: 25,
+        createdMessages: 4,
+        updatedMessages: 0,
+        errorMessage: null,
+        metadata: {
+          mode: "seed",
+          messagesTotal: 1264,
+        },
+      },
+    ],
     emails: [
       {
         id: securityEmailId,

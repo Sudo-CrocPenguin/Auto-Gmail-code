@@ -23,7 +23,7 @@ model User {
 }
 
 model Workspace {
-  id            String         @id
+  id            String           @id
   name          String
   ownerId       String
   plan          String
@@ -36,12 +36,13 @@ model Workspace {
   senders       SenderProfile[]
   rules         AutomationRule[]
   auditLogs     AuditLog[]
+  syncLogs      GmailSyncLog[]
 
   @@map("workspaces")
 }
 
 model GmailAccount {
-  id              String            @id
+  id              String           @id
   workspaceId     String
   emailAddress    String
   status          String
@@ -52,10 +53,11 @@ model GmailAccount {
   errorMessage    String?
   historyId       String?
   createdAt       DateTime
-  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   oauthToken      GmailOAuthToken?
   emails          EmailMessage[]
   alerts          Alert[]
+  syncLogs        GmailSyncLog[]
 
   @@unique([workspaceId, emailAddress])
   @@index([workspaceId])
@@ -63,50 +65,70 @@ model GmailAccount {
 }
 
 model GmailOAuthToken {
-  gmailAccountId       String       @id
-  workspaceId          String
-  encryptedAccessToken String?
+  gmailAccountId        String       @id
+  workspaceId           String
+  encryptedAccessToken  String?
   encryptedRefreshToken String?
-  encryptedIdToken     String?
-  scope                String?
-  tokenType            String?
-  expiryDate           BigInt?
-  createdAt            DateTime
-  updatedAt            DateTime
-  gmailAccount         GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
+  encryptedIdToken      String?
+  scope                 String?
+  tokenType             String?
+  expiryDate            BigInt?
+  createdAt             DateTime
+  updatedAt             DateTime
+  gmailAccount          GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@map("gmail_oauth_tokens")
 }
 
-model EmailMessage {
+model GmailSyncLog {
   id              String       @id
   workspaceId     String
   gmailAccountId  String
-  gmailMessageId  String
-  threadId        String
-  accountEmail    String
-  fromEmail       String
-  fromName        String?
-  fromDomain      String
-  toEmails        Json
-  subject         String
-  snippet         String
-  bodyHtml        String?
-  receivedAt      DateTime
-  labelIds        Json
-  hasAttachments  Boolean
-  attachments     Json
-  isRead          Boolean
-  isSpam          Boolean
-  isImportant     Boolean
-  reviewedAt      DateTime?
-  gmailUrl        String?
-  classification  Json?
-  actionHistory   Json
+  status          String
+  startedAt       DateTime
+  finishedAt      DateTime?
+  fetchedMessages Int
+  createdMessages Int
+  updatedMessages Int
+  errorMessage    String?
+  metadata        Json
   workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   gmailAccount    GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
-  alerts          Alert[]
+
+  @@index([workspaceId, gmailAccountId, startedAt])
+  @@index([workspaceId, status])
+  @@map("gmail_sync_logs")
+}
+
+model EmailMessage {
+  id             String       @id
+  workspaceId    String
+  gmailAccountId String
+  gmailMessageId String
+  threadId       String
+  accountEmail   String
+  fromEmail      String
+  fromName       String?
+  fromDomain     String
+  toEmails       Json
+  subject        String
+  snippet        String
+  bodyHtml       String?
+  receivedAt     DateTime
+  labelIds       Json
+  hasAttachments Boolean
+  attachments    Json
+  isRead         Boolean
+  isSpam         Boolean
+  isImportant    Boolean
+  reviewedAt     DateTime?
+  gmailUrl       String?
+  classification Json?
+  actionHistory  Json
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  gmailAccount   GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
+  alerts         Alert[]
 
   @@unique([workspaceId, gmailAccountId, gmailMessageId])
   @@index([workspaceId, receivedAt])
@@ -177,7 +199,7 @@ model AutomationRule {
 }
 
 model AuditLog {
-  id          String     @id
+  id          String    @id
   workspaceId String
   userId      String?
   action      String
@@ -187,11 +209,10 @@ model AuditLog {
   ip          String?
   metadata    Json
   createdAt   DateTime
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, action])
   @@map("audit_logs")
 }
-

@@ -148,6 +148,8 @@ curl "http://localhost:4000/api/emails?limit=25" \
 - `POST /api/gmail/oauth/start`
 - `GET /api/gmail/oauth/status`
 - `POST /api/gmail/accounts/:id/sync`
+- `GET /api/gmail/accounts/:id/sync-logs`
+- `GET /api/gmail/accounts/:id/sync-logs/:logId`
 - `POST /api/gmail/accounts/:id/reconnect`
 - `DELETE /api/gmail/accounts/:id`
 - `GET /api/emails`

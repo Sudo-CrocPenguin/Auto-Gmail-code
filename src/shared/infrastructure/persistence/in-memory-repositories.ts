@@ -5,6 +5,7 @@ import type { UserRepository } from "../../../features/auth/domain/user.reposito
 import type { EmailQueryParams, EmailMessageRepository } from "../../../features/emails/domain/email-message.repository";
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
+import type { GmailSyncLogQueryParams, GmailSyncLogRepository } from "../../../features/gmail-accounts/domain/gmail-sync-log.repository";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfileRepository, SenderQueryParams } from "../../../features/senders/domain/sender-profile.repository";
 import { defaultWorkspaceSettings, type WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
@@ -162,6 +163,48 @@ export class InMemoryGmailOAuthTokenRepository implements GmailOAuthTokenReposit
       (currentToken) => currentToken.gmailAccountId !== gmailAccountId,
     );
     return this.database.gmailOAuthTokens.length !== initialLength;
+  }
+}
+
+export class InMemoryGmailSyncLogRepository implements GmailSyncLogRepository {
+  public constructor(private readonly database: InMemoryDatabase) {}
+
+  public async create(log: Parameters<GmailSyncLogRepository["create"]>[0]) {
+    this.database.gmailSyncLogs.push(clone(log));
+    return clone(log);
+  }
+
+  public async findById(id: string) {
+    const log = this.database.gmailSyncLogs.find((currentLog) => currentLog.id === id);
+    return log ? clone(log) : null;
+  }
+
+  public async findByAccount(params: GmailSyncLogQueryParams) {
+    let logs = this.database.gmailSyncLogs.filter(
+      (log) =>
+        log.workspaceId === params.workspaceId &&
+        log.gmailAccountId === params.gmailAccountId,
+    );
+
+    if (params.status) {
+      logs = logs.filter((log) => log.status === params.status);
+    }
+
+    logs = [...logs].sort(
+      (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
+    );
+
+    return paginate(clone(logs), params);
+  }
+
+  public async update(id: string, data: Parameters<GmailSyncLogRepository["update"]>[1]) {
+    const log = this.database.gmailSyncLogs.find((currentLog) => currentLog.id === id);
+    if (!log) {
+      return null;
+    }
+
+    Object.assign(log, data);
+    return clone(log);
   }
 }
 
