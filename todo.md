@@ -339,15 +339,11 @@ Antes de produccion publica:
 
 ### 26. Docker y despliegue
 
-Falta:
+Base creada con Dockerfile, Docker Compose, healthcheck container, variables de entorno y guia de deploy. Falta:
 
-- Dockerfile.
-- docker-compose con PostgreSQL.
-- variables de entorno por ambiente.
-- script de migracion en deploy.
-- healthcheck container.
-- estrategia de backups y restauracion PostgreSQL.
-- documentar despliegue.
+- Separar compose local/staging de una configuracion productiva real.
+- Definir proveedor de despliegue final.
+- Automatizar migraciones en pipeline de release.
 
 ### 27. Calidad y CI
 
@@ -365,11 +361,9 @@ Agregar:
 
 Crear o ampliar:
 
-- Guia de deploy.
 - Guia de Google Cloud OAuth.
 - Guia de recuperacion de tokens revocados.
 - Runbook de errores Gmail.
-- Runbook de migraciones.
 - Contrato OpenAPI completo.
 
 ## Criterio sugerido para declarar backend v1 listo

@@ -190,3 +190,7 @@ Ver [docs/security.md](docs/security.md).
 ## Plan de desarrollo
 
 El plan vivo de desarrollo backend esta en [docs/backend-development-plan.md](docs/backend-development-plan.md). Ese documento ordena las fases de trabajo, criterios de terminado, ramas recomendadas y relacion con el backlog de [todo.md](todo.md).
+
+## Despliegue
+
+La guia de despliegue backend esta en [docs/deployment.md](docs/deployment.md). Incluye Docker Compose, migraciones, variables de entorno, healthcheck y backups PostgreSQL.

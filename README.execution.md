@@ -138,6 +138,12 @@ npm run db:deploy
 npm start
 ```
 
+Tambien existe una guia de despliegue con Docker y backups en:
+
+```txt
+docs/deployment.md
+```
+
 ## 6. Google Cloud OAuth para Gmail real
 
 Para conectar Gmail real necesitas:
