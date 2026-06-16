@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "auto-gmail-code-frontend",
   "private": true,
   "version": "0.0.0",
+  "description": "Frontend web cyberpunk para consumir la API de Auto-Gmail-code.",
   "type": "module",
   "scripts": {
     "dev": "vite",
