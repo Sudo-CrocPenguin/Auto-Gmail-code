@@ -22,6 +22,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Logger estructurado JSON para requests y errores.
 - Readiness check en `/api/health/ready` con validacion de Prisma y configuracion OAuth Gmail.
 - CI backend en GitHub Actions con build, tests, migraciones, seed y prueba Prisma sobre PostgreSQL.
+- Sync Gmail usa `nextPageToken` en mensajes recientes e historial incremental.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -95,10 +96,8 @@ Ya existe `npm run test:prisma` y se valido contra PostgreSQL de Docker. Falta a
 
 ### 7. Gmail sync mas completo
 
-El sync actual cubre mensajes recientes e incremental basico. Falta:
+El sync actual cubre mensajes recientes e incremental con paginacion `nextPageToken` hasta el limite configurado. Falta:
 
-- Manejar `nextPageToken` en `users.messages.list`.
-- Manejar `nextPageToken` en `users.history.list`.
 - Persistir cursor incremental con mas control.
 - Evitar duplicados de alertas derivadas.
 - Permitir sync por rango de fechas.

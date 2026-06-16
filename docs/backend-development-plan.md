@@ -57,7 +57,7 @@ Entregables:
 - Verificacion end-to-end con Google Cloud OAuth real.
 - Manejo formal de refresh tokens revocados y errores `invalid_grant`.
 - Estado `RECONNECT_REQUIRED` confiable con alerta y auditoria.
-- Paginacion con `nextPageToken` en sincronizacion inicial e incremental.
+- Sincronizacion inicial e incremental con `nextPageToken` en Gmail API.
 - Logs de sincronizacion por cuenta Gmail.
 - Endpoint para consultar historial de sincronizaciones.
 - Evitar duplicados de alertas y conteos incorrectos de remitentes.
