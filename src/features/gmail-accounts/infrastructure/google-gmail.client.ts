@@ -46,6 +46,36 @@ export class GoogleGmailClient {
     return tokens;
   }
 
+  public async revokeCredentials(credentials: Credentials): Promise<"revoked" | "skipped"> {
+    const token = credentials.refresh_token ?? credentials.access_token;
+    if (!token) {
+      return "skipped";
+    }
+
+    await this.createOAuthClient().revokeToken(token);
+    return "revoked";
+  }
+
+  public async fetchAttachment(
+    credentials: Credentials,
+    messageId: string,
+    attachmentId: string,
+  ): Promise<Buffer> {
+    const gmail = this.createGmailClient(credentials);
+    const response = await gmail.users.messages.attachments.get({
+      userId: "me",
+      messageId,
+      id: attachmentId,
+    });
+    const data = response.data.data;
+
+    if (!data) {
+      throw new AppError("Gmail no devolvio contenido del adjunto.", 502, "GMAIL_ATTACHMENT_EMPTY");
+    }
+
+    return Buffer.from(data.replaceAll("-", "+").replaceAll("_", "/"), "base64");
+  }
+
   public async getProfile(credentials: Credentials): Promise<GmailProfile> {
     const gmail = this.createGmailClient(credentials);
     const response = await gmail.users.getProfile({ userId: "me" });
@@ -69,33 +99,35 @@ export class GoogleGmailClient {
     maxResults = environment.google.syncMaxMessages,
   ): Promise<SyncedGmailMessage[]> {
     const gmail = this.createGmailClient(credentials);
-    const historyResponse = await gmail.users.history.list({
-      userId: "me",
-      startHistoryId: historyId,
-      historyTypes: ["messageAdded"],
-      maxResults,
-    });
-
     const messageIds = new Set<string>();
-    for (const history of historyResponse.data.history ?? []) {
-      for (const addedMessage of history.messagesAdded ?? []) {
-        if (addedMessage.message?.id) {
-          messageIds.add(addedMessage.message.id);
+    let pageToken: string | undefined;
+
+    do {
+      const params: gmail_v1.Params$Resource$Users$History$List = {
+        userId: "me",
+        startHistoryId: historyId,
+        historyTypes: ["messageAdded"],
+        maxResults: resolvePageSize(maxResults - messageIds.size),
+      };
+
+      if (pageToken) {
+        params.pageToken = pageToken;
+      }
+
+      const historyResponse = await gmail.users.history.list(params);
+
+      for (const history of historyResponse.data.history ?? []) {
+        for (const addedMessage of history.messagesAdded ?? []) {
+          if (addedMessage.message?.id) {
+            messageIds.add(addedMessage.message.id);
+          }
         }
       }
-    }
 
-    const messages: SyncedGmailMessage[] = [];
-    for (const messageId of Array.from(messageIds).slice(0, maxResults)) {
-      const messageResponse = await gmail.users.messages.get({
-        userId: "me",
-        id: messageId,
-        format: "full",
-      });
-      messages.push(mapGmailMessage(messageResponse.data));
-    }
+      pageToken = historyResponse.data.nextPageToken ?? undefined;
+    } while (pageToken && messageIds.size < maxResults);
 
-    return messages;
+    return fetchFullMessages(gmail, Array.from(messageIds).slice(0, maxResults));
   }
 
   public async fetchRecentMessages(
@@ -103,28 +135,34 @@ export class GoogleGmailClient {
     maxResults = environment.google.syncMaxMessages,
   ): Promise<SyncedGmailMessage[]> {
     const gmail = this.createGmailClient(credentials);
-    const listResponse = await gmail.users.messages.list({
-      userId: "me",
-      maxResults,
-      includeSpamTrash: false,
-    });
+    const messageIds: string[] = [];
+    let pageToken: string | undefined;
 
-    const messageRefs = listResponse.data.messages ?? [];
-    const messages: SyncedGmailMessage[] = [];
-
-    for (const messageRef of messageRefs) {
-      if (!messageRef.id) continue;
-
-      const messageResponse = await gmail.users.messages.get({
+    do {
+      const params: gmail_v1.Params$Resource$Users$Messages$List = {
         userId: "me",
-        id: messageRef.id,
-        format: "full",
-      });
+        maxResults: resolvePageSize(maxResults - messageIds.length),
+        includeSpamTrash: false,
+      };
 
-      messages.push(mapGmailMessage(messageResponse.data));
-    }
+      if (pageToken) {
+        params.pageToken = pageToken;
+      }
 
-    return messages;
+      const listResponse = await gmail.users.messages.list(params);
+
+      for (const messageRef of listResponse.data.messages ?? []) {
+        if (!messageRef.id || messageIds.length >= maxResults) {
+          continue;
+        }
+
+        messageIds.push(messageRef.id);
+      }
+
+      pageToken = listResponse.data.nextPageToken ?? undefined;
+    } while (pageToken && messageIds.length < maxResults);
+
+    return fetchFullMessages(gmail, messageIds);
   }
 
   private createGmailClient(credentials: Credentials): gmail_v1.Gmail {
@@ -148,6 +186,29 @@ export class GoogleGmailClient {
       environment.google.redirectUri,
     );
   }
+}
+
+async function fetchFullMessages(
+  gmail: gmail_v1.Gmail,
+  messageIds: string[],
+): Promise<SyncedGmailMessage[]> {
+  const messages: SyncedGmailMessage[] = [];
+
+  for (const messageId of messageIds) {
+    const messageResponse = await gmail.users.messages.get({
+      userId: "me",
+      id: messageId,
+      format: "full",
+    });
+
+    messages.push(mapGmailMessage(messageResponse.data));
+  }
+
+  return messages;
+}
+
+function resolvePageSize(remaining: number): number {
+  return Math.max(1, Math.min(remaining, 100));
 }
 
 function mapGmailMessage(message: gmail_v1.Schema$Message): SyncedGmailMessage {

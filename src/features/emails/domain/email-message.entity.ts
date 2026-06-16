@@ -29,6 +29,7 @@ export interface EmailMessage {
   subject: string;
   snippet: string;
   bodyHtml: string | null;
+  bodyText: string | null;
   receivedAt: string;
   labelIds: string[];
   hasAttachments: boolean;
@@ -41,4 +42,3 @@ export interface EmailMessage {
   classification: EmailClassification | null;
   actionHistory: EmailActionHistoryEntry[];
 }
-

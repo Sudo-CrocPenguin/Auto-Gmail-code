@@ -6,6 +6,7 @@ import type { User } from "../../../features/auth/domain/user.entity";
 import type { EmailMessage } from "../../../features/emails/domain/email-message.entity";
 import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail-account.entity";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
+import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
 import type { AutomationRule } from "../../../features/rules/domain/automation-rule.entity";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
 import type { WorkspaceSettings } from "../../../features/settings/domain/workspace-settings.entity";
@@ -17,6 +18,7 @@ export interface InMemoryDatabase {
   workspaceSettings: Record<string, WorkspaceSettings>;
   gmailAccounts: GmailAccount[];
   gmailOAuthTokens: GmailOAuthToken[];
+  gmailSyncLogs: GmailSyncLog[];
   emails: EmailMessage[];
   alerts: Alert[];
   senders: SenderProfile[];
@@ -101,6 +103,24 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
       },
     ],
     gmailOAuthTokens: [],
+    gmailSyncLogs: [
+      {
+        id: "sync_log_primary_demo",
+        workspaceId,
+        gmailAccountId: primaryGmailId,
+        status: "COMPLETED",
+        startedAt: "2026-06-15T09:54:30.000Z",
+        finishedAt: "2026-06-15T09:55:00.000Z",
+        fetchedMessages: 25,
+        createdMessages: 4,
+        updatedMessages: 0,
+        errorMessage: null,
+        metadata: {
+          mode: "seed",
+          messagesTotal: 1264,
+        },
+      },
+    ],
     emails: [
       {
         id: securityEmailId,
@@ -117,6 +137,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         snippet: "Detectamos un nuevo inicio de sesion en tu cuenta.",
         bodyHtml:
           "<p>Detectamos un nuevo inicio de sesion desde un dispositivo no reconocido.</p>",
+        bodyText: "Detectamos un nuevo inicio de sesion desde un dispositivo no reconocido.",
         receivedAt: "2026-06-15T09:50:00.000Z",
         labelIds: ["INBOX", "IMPORTANT"],
         hasAttachments: false,
@@ -165,6 +186,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         subject: "Factura mensual disponible",
         snippet: "Tu factura de junio ya esta disponible para revision.",
         bodyHtml: "<p>La factura mensual de Auto-Gmail-code esta disponible.</p>",
+        bodyText: "La factura mensual de Auto-Gmail-code esta disponible.",
         receivedAt: "2026-06-15T08:35:00.000Z",
         labelIds: ["INBOX"],
         hasAttachments: true,
@@ -220,6 +242,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         subject: "Notificacion judicial pendiente",
         snippet: "Se ha emitido una notificacion que requiere revision.",
         bodyHtml: "<p>Existe una notificacion judicial pendiente de lectura.</p>",
+        bodyText: "Existe una notificacion judicial pendiente de lectura.",
         receivedAt: "2026-06-14T16:15:00.000Z",
         labelIds: ["INBOX", "IMPORTANT"],
         hasAttachments: true,
@@ -275,6 +298,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         subject: "Promocion limitada",
         snippet: "Obtenga descuento especial durante las proximas 24 horas.",
         bodyHtml: "<p>Promocion de temporada con descuento.</p>",
+        bodyText: "Promocion de temporada con descuento.",
         receivedAt: "2026-06-13T12:00:00.000Z",
         labelIds: ["CATEGORY_PROMOTIONS"],
         hasAttachments: false,

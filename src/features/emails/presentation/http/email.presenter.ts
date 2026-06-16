@@ -3,7 +3,7 @@ import sanitizeHtml from "sanitize-html";
 import type { EmailMessage } from "../../domain/email-message.entity";
 
 export function presentEmailSummary(email: EmailMessage) {
-  const { bodyHtml: _bodyHtml, actionHistory: _actionHistory, attachments, ...summary } = email;
+  const { bodyHtml: _bodyHtml, bodyText: _bodyText, actionHistory: _actionHistory, attachments, ...summary } = email;
 
   return {
     ...summary,
@@ -59,4 +59,3 @@ function sanitizeEmailHtml(html: string): string {
     },
   });
 }
-

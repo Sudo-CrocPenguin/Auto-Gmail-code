@@ -6,6 +6,7 @@ import type { AuthenticatedContext } from "../../../shared/domain/authenticated-
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import type { GmailSyncLogRepository } from "../domain/gmail-sync-log.repository";
 import { GmailSyncService } from "./gmail-sync.service";
 
 export class SyncGmailAccountUseCase {
@@ -13,6 +14,7 @@ export class SyncGmailAccountUseCase {
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly gmailSyncService: GmailSyncService,
+    private readonly syncLogs: GmailSyncLogRepository,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string): Promise<GmailAccount> {
@@ -28,11 +30,30 @@ export class SyncGmailAccountUseCase {
       return syncResult.account;
     }
 
+    const startedAt = new Date().toISOString();
     const updatedAccount = await this.gmailAccounts.update(account.id, {
       status: "CONNECTED",
-      lastSyncAt: new Date().toISOString(),
+      lastSyncAt: startedAt,
       totalMessages: account.totalMessages + 3,
       errorMessage: null,
+    });
+
+    await this.syncLogs.create({
+      id: randomUUID(),
+      workspaceId: context.workspaceId,
+      gmailAccountId: account.id,
+      status: "COMPLETED",
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      fetchedMessages: 3,
+      createdMessages: 0,
+      updatedMessages: 3,
+      errorMessage: null,
+      metadata: {
+        mode: "demo",
+        previousStatus: account.status,
+        reason: "La cuenta demo no tiene credenciales OAuth guardadas.",
+      },
     });
 
     await this.auditLogs.create({

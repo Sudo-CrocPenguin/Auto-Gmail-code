@@ -4,7 +4,7 @@ declare global {
   namespace Express {
     interface Request {
       auth?: AuthenticatedContext;
+      requestId?: string;
     }
   }
 }
-

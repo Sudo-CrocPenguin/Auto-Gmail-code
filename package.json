@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "test": "vitest run",
+    "test:prisma": "vitest run tests/prisma.integration.test.ts",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

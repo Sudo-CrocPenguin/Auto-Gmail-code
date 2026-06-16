@@ -47,11 +47,18 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schem
 JWT_SECRET=change-me-in-local-env
 JWT_EXPIRES_IN=1d
 TOKEN_ENCRYPTION_KEY=change-me-token-encryption-key
+RATE_LIMIT_AUTH_WINDOW_MS=900000
+RATE_LIMIT_AUTH_MAX=10
+RATE_LIMIT_GMAIL_WINDOW_MS=60000
+RATE_LIMIT_GMAIL_MAX=120
+RATE_LIMIT_SYNC_WINDOW_MS=300000
+RATE_LIMIT_SYNC_MAX=5
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:4000/api/gmail/oauth/callback
 GOOGLE_OAUTH_SCOPES=https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify
 GMAIL_SYNC_MAX_MESSAGES=25
+GMAIL_ATTACHMENT_MAX_BYTES=5242880
 ```
 
 Reglas:
@@ -59,8 +66,14 @@ Reglas:
 - No subir `.env` al repositorio.
 - Cambiar `JWT_SECRET` en cualquier ambiente que no sea demo local.
 - Cambiar `TOKEN_ENCRYPTION_KEY` antes de conectar cuentas Gmail reales.
+- En `production`, `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` no pueden usar valores por defecto.
+- En `production`, `PERSISTENCE_DRIVER` debe ser `prisma` y `DATABASE_URL` es obligatorio.
 - Usar `PERSISTENCE_DRIVER=prisma` si necesitas persistencia real.
 - Usar `PERSISTENCE_DRIVER=memory` solo para pruebas rapidas o tests.
+- Ajustar rate limits segun ambiente:
+  - `RATE_LIMIT_AUTH_*` protege login.
+  - `RATE_LIMIT_GMAIL_*` protege endpoints Gmail generales.
+  - `RATE_LIMIT_SYNC_*` protege sincronizaciones manuales.
 
 ## 4. Modo rapido en memoria
 
@@ -124,6 +137,12 @@ En produccion o servidor:
 npm run build
 npm run db:deploy
 npm start
+```
+
+Tambien existe una guia de despliegue con Docker y backups en:
+
+```txt
+docs/deployment.md
 ```
 
 ## 6. Google Cloud OAuth para Gmail real
@@ -208,6 +227,7 @@ npm run dev
 npm run build
 npm start
 npm test
+npm run test:prisma
 npm run check
 npm run db:generate
 npm run db:migrate
@@ -220,6 +240,8 @@ Uso recomendado:
 - Desarrollo sin DB: `npm run dev`.
 - Desarrollo con DB: `npm run db:migrate`, `npm run db:seed`, `npm run dev`.
 - Validacion antes de commit: `npm run check`.
+- Validacion Prisma con DB real: definir `PRISMA_TEST_DATABASE_URL` y ejecutar `npm run test:prisma`.
+- CI: `.github/workflows/backend-check.yml` ejecuta `npm ci`, `db:generate`, `npm run check`, migraciones, seed y `npm run test:prisma` con PostgreSQL.
 - Produccion: `npm run build`, `npm run db:deploy`, `npm start`.
 
 ## 9. Endpoints de verificacion
@@ -229,6 +251,14 @@ Healthcheck:
 ```txt
 GET /api/health
 ```
+
+Readiness operativo:
+
+```txt
+GET /api/health/ready
+```
+
+`/api/health` indica que el proceso HTTP esta vivo. `/api/health/ready` valida dependencias operativas: consulta PostgreSQL cuando `PERSISTENCE_DRIVER=prisma` y reporta si la configuracion OAuth Gmail esta completa. Todas las respuestas incluyen header `x-request-id`; si el cliente envia ese header, el backend lo respeta para correlacionar logs.
 
 Contrato OpenAPI:
 
@@ -240,7 +270,17 @@ Usuario actual:
 
 ```txt
 GET /api/auth/me
+PATCH /api/users/me
+PATCH /api/auth/password
 ```
+
+Adjuntos:
+
+```txt
+GET /api/emails/:id/attachments/:attachmentId
+```
+
+La descarga de adjuntos es bajo demanda. El backend valida metadata, tamano maximo (`GMAIL_ATTACHMENT_MAX_BYTES`) y tipos ejecutables basicos antes de pedir el contenido a Gmail.
 
 Settings:
 
@@ -343,4 +383,3 @@ debe funcionar.
 - `POST /api/gmail/oauth/start` devuelve `authUrl`.
 - Despues de OAuth, `/api/gmail/accounts` muestra cuenta.
 - `/api/emails` muestra correos sincronizados.
-

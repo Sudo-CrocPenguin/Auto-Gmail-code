@@ -15,6 +15,8 @@ import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
+import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
+import type { GmailSyncLogQueryParams, GmailSyncLogRepository } from "../../../features/gmail-accounts/domain/gmail-sync-log.repository";
 import type { AutomationRule, RuleAction, RuleCondition } from "../../../features/rules/domain/automation-rule.entity";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
 import type { SenderProfile } from "../../../features/senders/domain/sender-profile.entity";
@@ -105,6 +107,22 @@ function mapGmailOAuthToken(token: Prisma.GmailOAuthTokenGetPayload<object>): Gm
   };
 }
 
+function mapGmailSyncLog(log: Prisma.GmailSyncLogGetPayload<object>): GmailSyncLog {
+  return {
+    id: log.id,
+    workspaceId: log.workspaceId,
+    gmailAccountId: log.gmailAccountId,
+    status: log.status as GmailSyncLog["status"],
+    startedAt: toIsoRequired(log.startedAt),
+    finishedAt: toIso(log.finishedAt),
+    fetchedMessages: log.fetchedMessages,
+    createdMessages: log.createdMessages,
+    updatedMessages: log.updatedMessages,
+    errorMessage: log.errorMessage,
+    metadata: fromJson<Record<string, unknown>>(log.metadata, {}),
+  };
+}
+
 function mapEmail(email: Prisma.EmailMessageGetPayload<object>): EmailMessage {
   return {
     id: email.id,
@@ -120,6 +138,7 @@ function mapEmail(email: Prisma.EmailMessageGetPayload<object>): EmailMessage {
     subject: email.subject,
     snippet: email.snippet,
     bodyHtml: email.bodyHtml,
+    bodyText: email.bodyText,
     receivedAt: toIsoRequired(email.receivedAt),
     labelIds: fromJson<string[]>(email.labelIds, []),
     hasAttachments: email.hasAttachments,
@@ -222,6 +241,11 @@ export class PrismaUserRepository implements UserRepository {
     const user = await this.client.user.findUnique({
       where: { id },
     });
+    return user ? mapUser(user) : null;
+  }
+
+  public async update(id: string, data: Parameters<UserRepository["update"]>[1]): Promise<User | null> {
+    const user = await this.client.user.update({ where: { id }, data }).catch(() => null);
     return user ? mapUser(user) : null;
   }
 }
@@ -381,6 +405,80 @@ export class PrismaGmailOAuthTokenRepository implements GmailOAuthTokenRepositor
   }
 }
 
+export class PrismaGmailSyncLogRepository implements GmailSyncLogRepository {
+  public constructor(private readonly client: PrismaClient) {}
+
+  public async create(log: GmailSyncLog): Promise<GmailSyncLog> {
+    const createdLog = await this.client.gmailSyncLog.create({
+      data: this.toPersistence(log),
+    });
+    return mapGmailSyncLog(createdLog);
+  }
+
+  public async findById(id: string): Promise<GmailSyncLog | null> {
+    const log = await this.client.gmailSyncLog.findUnique({ where: { id } });
+    return log ? mapGmailSyncLog(log) : null;
+  }
+
+  public async findByAccount(params: GmailSyncLogQueryParams) {
+    const where: Prisma.GmailSyncLogWhereInput = {
+      workspaceId: params.workspaceId,
+      gmailAccountId: params.gmailAccountId,
+    };
+    if (params.status) where.status = params.status;
+
+    const [logs, total] = await Promise.all([
+      this.client.gmailSyncLog.findMany({
+        where,
+        orderBy: { startedAt: "desc" },
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+      }),
+      this.client.gmailSyncLog.count({ where }),
+    ]);
+
+    return {
+      data: logs.map(mapGmailSyncLog),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
+  }
+
+  public async update(id: string, data: Partial<GmailSyncLog>): Promise<GmailSyncLog | null> {
+    const updateData: Prisma.GmailSyncLogUpdateInput = {};
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.finishedAt !== undefined) updateData.finishedAt = toDate(data.finishedAt);
+    if (data.fetchedMessages !== undefined) updateData.fetchedMessages = data.fetchedMessages;
+    if (data.createdMessages !== undefined) updateData.createdMessages = data.createdMessages;
+    if (data.updatedMessages !== undefined) updateData.updatedMessages = data.updatedMessages;
+    if (data.errorMessage !== undefined) updateData.errorMessage = data.errorMessage;
+    if (data.metadata !== undefined) updateData.metadata = toJson(data.metadata);
+
+    const log = await this.client.gmailSyncLog.update({ where: { id }, data: updateData }).catch(() => null);
+    return log ? mapGmailSyncLog(log) : null;
+  }
+
+  private toPersistence(log: GmailSyncLog): Prisma.GmailSyncLogUncheckedCreateInput {
+    return {
+      id: log.id,
+      workspaceId: log.workspaceId,
+      gmailAccountId: log.gmailAccountId,
+      status: log.status,
+      startedAt: toDateRequired(log.startedAt),
+      finishedAt: toDate(log.finishedAt),
+      fetchedMessages: log.fetchedMessages,
+      createdMessages: log.createdMessages,
+      updatedMessages: log.updatedMessages,
+      errorMessage: log.errorMessage,
+      metadata: toJson(log.metadata),
+    };
+  }
+}
+
 export class PrismaEmailMessageRepository implements EmailMessageRepository {
   public constructor(private readonly client: PrismaClient) {}
 
@@ -402,6 +500,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       subject: email.subject,
       snippet: email.snippet,
       bodyHtml: email.bodyHtml,
+      bodyText: email.bodyText,
       receivedAt: toDateRequired(email.receivedAt),
       labelIds: toJson(email.labelIds),
       hasAttachments: email.hasAttachments,
@@ -486,6 +585,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
         (email) =>
           includesInsensitive(email.subject, search) ||
           includesInsensitive(email.snippet, search) ||
+          includesInsensitive(email.bodyText, search) ||
           includesInsensitive(email.fromEmail, search) ||
           includesInsensitive(email.fromName, search) ||
           includesInsensitive(email.fromDomain, search),
@@ -523,6 +623,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
     if (data.reviewedAt !== undefined) updateData.reviewedAt = toDate(data.reviewedAt);
     if (data.actionHistory !== undefined) updateData.actionHistory = toJson(data.actionHistory);
     if (data.bodyHtml !== undefined) updateData.bodyHtml = data.bodyHtml;
+    if (data.bodyText !== undefined) updateData.bodyText = data.bodyText;
     if (data.labelIds !== undefined) updateData.labelIds = toJson(data.labelIds);
     if (data.attachments !== undefined) updateData.attachments = toJson(data.attachments);
 
@@ -545,6 +646,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       subject: email.subject,
       snippet: email.snippet,
       bodyHtml: email.bodyHtml,
+      bodyText: email.bodyText,
       receivedAt: toDateRequired(email.receivedAt),
       labelIds: toJson(email.labelIds),
       hasAttachments: email.hasAttachments,

@@ -16,7 +16,9 @@ import { createAlertRouter } from "../features/alerts/presentation/http/alert.ro
 import { ListAuditLogsUseCase } from "../features/audit/application/list-audit-logs.use-case";
 import { AuditController } from "../features/audit/presentation/http/audit.controller";
 import { createAuditRouter } from "../features/audit/presentation/http/audit.routes";
+import { ChangePasswordUseCase } from "../features/auth/application/change-password.use-case";
 import { CorrectEmailClassificationUseCase } from "../features/emails/application/correct-email-classification.use-case";
+import { DownloadEmailAttachmentUseCase } from "../features/emails/application/download-email-attachment.use-case";
 import { GetEmailDetailUseCase } from "../features/emails/application/get-email-detail.use-case";
 import { ListEmailsUseCase } from "../features/emails/application/list-emails.use-case";
 import { MarkEmailImportantUseCase } from "../features/emails/application/mark-email-important.use-case";
@@ -25,9 +27,11 @@ import { EmailController } from "../features/emails/presentation/http/email.cont
 import { createEmailRouter } from "../features/emails/presentation/http/email.routes";
 import { DisconnectGmailAccountUseCase } from "../features/gmail-accounts/application/disconnect-gmail-account.use-case";
 import { GetGmailOAuthStatusUseCase } from "../features/gmail-accounts/application/get-gmail-oauth-status.use-case";
+import { GetGmailSyncLogDetailUseCase } from "../features/gmail-accounts/application/get-gmail-sync-log-detail.use-case";
 import { GmailSyncService } from "../features/gmail-accounts/application/gmail-sync.service";
 import { HandleGmailOAuthCallbackUseCase } from "../features/gmail-accounts/application/handle-gmail-oauth-callback.use-case";
 import { ListGmailAccountsUseCase } from "../features/gmail-accounts/application/list-gmail-accounts.use-case";
+import { ListGmailSyncLogsUseCase } from "../features/gmail-accounts/application/list-gmail-sync-logs.use-case";
 import { OAuthStateService } from "../features/gmail-accounts/application/oauth-state.service";
 import { ReconnectGmailAccountUseCase } from "../features/gmail-accounts/application/reconnect-gmail-account.use-case";
 import { StartGmailOAuthUseCase } from "../features/gmail-accounts/application/start-gmail-oauth.use-case";
@@ -40,6 +44,7 @@ import { CreateRuleUseCase } from "../features/rules/application/create-rule.use
 import { DeleteRuleUseCase } from "../features/rules/application/delete-rule.use-case";
 import { GetRuleDetailUseCase } from "../features/rules/application/get-rule-detail.use-case";
 import { ListRulesUseCase } from "../features/rules/application/list-rules.use-case";
+import { AutomationRuleEngine } from "../features/rules/application/automation-rule-engine.service";
 import { SetRuleEnabledUseCase } from "../features/rules/application/set-rule-enabled.use-case";
 import { UpdateRuleUseCase } from "../features/rules/application/update-rule.use-case";
 import { RuleController } from "../features/rules/presentation/http/rule.controller";
@@ -55,6 +60,9 @@ import { GetWorkspaceSettingsUseCase } from "../features/settings/application/ge
 import { UpdateWorkspaceSettingsUseCase } from "../features/settings/application/update-workspace-settings.use-case";
 import { SettingsController } from "../features/settings/presentation/http/settings.controller";
 import { createSettingsRouter } from "../features/settings/presentation/http/settings.routes";
+import { UpdateCurrentUserProfileUseCase } from "../features/users/application/update-current-user-profile.use-case";
+import { UserController } from "../features/users/presentation/http/user.controller";
+import { createUserRouter } from "../features/users/presentation/http/user.routes";
 import { GetCurrentWorkspaceUseCase } from "../features/workspace/application/get-current-workspace.use-case";
 import { UpdateCurrentWorkspaceUseCase } from "../features/workspace/application/update-current-workspace.use-case";
 import { WorkspaceController } from "../features/workspace/presentation/http/workspace.controller";
@@ -68,6 +76,7 @@ import { createAuthRouter } from "../features/auth/presentation/http/auth.routes
 import { environment } from "./config/environment";
 import { AppError } from "./domain/errors/app-error";
 import { AuthMiddleware } from "./http/middlewares/auth.middleware";
+import { RateLimitMiddleware } from "./http/middlewares/rate-limit.middleware";
 import { createSeededInMemoryDatabase } from "./infrastructure/persistence/in-memory-database";
 import {
   InMemoryAlertRepository,
@@ -76,6 +85,7 @@ import {
   InMemoryEmailMessageRepository,
   InMemoryGmailAccountRepository,
   InMemoryGmailOAuthTokenRepository,
+  InMemoryGmailSyncLogRepository,
   InMemorySenderProfileRepository,
   InMemoryWorkspaceSettingsRepository,
   InMemoryUserRepository,
@@ -89,6 +99,7 @@ import {
   PrismaEmailMessageRepository,
   PrismaGmailAccountRepository,
   PrismaGmailOAuthTokenRepository,
+  PrismaGmailSyncLogRepository,
   PrismaSenderProfileRepository,
   PrismaWorkspaceSettingsRepository,
   PrismaUserRepository,
@@ -100,6 +111,7 @@ import { TokenEncryptionService } from "./infrastructure/security/token-encrypti
 export interface ApplicationContainer {
   routes: {
     auth: Router;
+    users: Router;
     workspace: Router;
     gmail: Router;
     emails: Router;
@@ -120,6 +132,7 @@ export function buildContainer(): ApplicationContainer {
   const auditLogs = repositories.auditLogs;
   const gmailAccounts = repositories.gmailAccounts;
   const gmailOAuthTokens = repositories.gmailOAuthTokens;
+  const gmailSyncLogs = repositories.gmailSyncLogs;
   const emails = repositories.emails;
   const alerts = repositories.alerts;
   const senders = repositories.senders;
@@ -131,22 +144,40 @@ export function buildContainer(): ApplicationContainer {
   const oauthStateService = new OAuthStateService();
   const gmailTokenVault = new GmailTokenVault(gmailOAuthTokens, tokenEncryptionService);
   const googleGmailClient = new GoogleGmailClient();
+  const automationRuleEngine = new AutomationRuleEngine(rules);
   const gmailSyncService = new GmailSyncService(
     gmailAccounts,
     emails,
     alerts,
     senders,
     auditLogs,
+    gmailSyncLogs,
     gmailTokenVault,
     googleGmailClient,
+    automationRuleEngine,
   );
   const authMiddleware = new AuthMiddleware(jwtService);
+  const authRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.auth,
+    keyPrefix: "auth",
+  });
+  const gmailRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.gmail,
+    keyPrefix: "gmail",
+    keyGenerator: (request) => request.auth?.workspaceId ?? request.ip ?? "unknown",
+  });
+  const syncRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.sync,
+    keyPrefix: "gmail-sync",
+    keyGenerator: (request) => request.auth?.workspaceId ?? request.ip ?? "unknown",
+  });
 
   return composeApplication({
     users,
     workspaces,
     auditLogs,
     gmailAccounts,
+    gmailSyncLogs,
     emails,
     alerts,
     senders,
@@ -154,6 +185,9 @@ export function buildContainer(): ApplicationContainer {
     settings,
     jwtService,
     authMiddleware,
+    authRateLimit,
+    gmailRateLimit,
+    syncRateLimit,
     gmailTokenVault,
     googleGmailClient,
     gmailSyncService,
@@ -173,6 +207,7 @@ function buildRepositories() {
       auditLogs: new PrismaAuditLogRepository(prisma),
       gmailAccounts: new PrismaGmailAccountRepository(prisma),
       gmailOAuthTokens: new PrismaGmailOAuthTokenRepository(prisma),
+      gmailSyncLogs: new PrismaGmailSyncLogRepository(prisma),
       emails: new PrismaEmailMessageRepository(prisma),
       alerts: new PrismaAlertRepository(prisma),
       senders: new PrismaSenderProfileRepository(prisma),
@@ -189,6 +224,7 @@ function buildRepositories() {
     auditLogs: new InMemoryAuditLogRepository(database),
     gmailAccounts: new InMemoryGmailAccountRepository(database),
     gmailOAuthTokens: new InMemoryGmailOAuthTokenRepository(database),
+    gmailSyncLogs: new InMemoryGmailSyncLogRepository(database),
     emails: new InMemoryEmailMessageRepository(database),
     alerts: new InMemoryAlertRepository(database),
     senders: new InMemorySenderProfileRepository(database),
@@ -202,6 +238,7 @@ interface ComposedApplicationDependencies {
   workspaces: InMemoryWorkspaceRepository | PrismaWorkspaceRepository;
   auditLogs: InMemoryAuditLogRepository | PrismaAuditLogRepository;
   gmailAccounts: InMemoryGmailAccountRepository | PrismaGmailAccountRepository;
+  gmailSyncLogs: InMemoryGmailSyncLogRepository | PrismaGmailSyncLogRepository;
   emails: InMemoryEmailMessageRepository | PrismaEmailMessageRepository;
   alerts: InMemoryAlertRepository | PrismaAlertRepository;
   senders: InMemorySenderProfileRepository | PrismaSenderProfileRepository;
@@ -209,6 +246,9 @@ interface ComposedApplicationDependencies {
   settings: InMemoryWorkspaceSettingsRepository | PrismaWorkspaceSettingsRepository;
   jwtService: JwtService;
   authMiddleware: AuthMiddleware;
+  authRateLimit: RateLimitMiddleware;
+  gmailRateLimit: RateLimitMiddleware;
+  syncRateLimit: RateLimitMiddleware;
   gmailTokenVault: GmailTokenVault;
   googleGmailClient: GoogleGmailClient;
   gmailSyncService: GmailSyncService;
@@ -221,6 +261,10 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new LoginUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
     new GetAuthenticatedUserUseCase(dependencies.users, dependencies.workspaces),
     new LogoutUserUseCase(dependencies.auditLogs),
+    new ChangePasswordUseCase(dependencies.users, dependencies.auditLogs),
+  );
+  const userController = new UserController(
+    new UpdateCurrentUserProfileUseCase(dependencies.users, dependencies.auditLogs),
   );
 
   const workspaceController = new WorkspaceController(
@@ -244,14 +288,26 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       dependencies.gmailSyncService,
       dependencies.oauthStateService,
     ),
-    new SyncGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailSyncService),
+    new SyncGmailAccountUseCase(
+      dependencies.gmailAccounts,
+      dependencies.auditLogs,
+      dependencies.gmailSyncService,
+      dependencies.gmailSyncLogs,
+    ),
     new ReconnectGmailAccountUseCase(
       dependencies.gmailAccounts,
       dependencies.auditLogs,
       dependencies.googleGmailClient,
       dependencies.oauthStateService,
     ),
-    new DisconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailTokenVault),
+    new DisconnectGmailAccountUseCase(
+      dependencies.gmailAccounts,
+      dependencies.auditLogs,
+      dependencies.gmailTokenVault,
+      dependencies.googleGmailClient,
+    ),
+    new ListGmailSyncLogsUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
+    new GetGmailSyncLogDetailUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
   );
 
   const emailController = new EmailController(
@@ -260,6 +316,12 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new CorrectEmailClassificationUseCase(dependencies.emails, dependencies.auditLogs),
     new MarkEmailReviewedUseCase(dependencies.emails, dependencies.auditLogs),
     new MarkEmailImportantUseCase(dependencies.emails, dependencies.auditLogs),
+    new DownloadEmailAttachmentUseCase(
+      dependencies.emails,
+      dependencies.gmailTokenVault,
+      dependencies.googleGmailClient,
+      dependencies.auditLogs,
+    ),
   );
 
   const alertController = new AlertController(
@@ -302,9 +364,15 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
 
   return {
     routes: {
-      auth: createAuthRouter(authController, dependencies.authMiddleware),
+      auth: createAuthRouter(authController, dependencies.authMiddleware, dependencies.authRateLimit),
+      users: createUserRouter(userController, dependencies.authMiddleware),
       workspace: createWorkspaceRouter(workspaceController, dependencies.authMiddleware),
-      gmail: createGmailAccountRouter(gmailAccountController, dependencies.authMiddleware),
+      gmail: createGmailAccountRouter(
+        gmailAccountController,
+        dependencies.authMiddleware,
+        dependencies.gmailRateLimit,
+        dependencies.syncRateLimit,
+      ),
       emails: createEmailRouter(emailController, dependencies.authMiddleware),
       alerts: createAlertRouter(alertController, dependencies.authMiddleware),
       senders: createSenderRouter(senderController, dependencies.authMiddleware),

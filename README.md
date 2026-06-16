@@ -148,6 +148,8 @@ curl "http://localhost:4000/api/emails?limit=25" \
 - `POST /api/gmail/oauth/start`
 - `GET /api/gmail/oauth/status`
 - `POST /api/gmail/accounts/:id/sync`
+- `GET /api/gmail/accounts/:id/sync-logs`
+- `GET /api/gmail/accounts/:id/sync-logs/:logId`
 - `POST /api/gmail/accounts/:id/reconnect`
 - `DELETE /api/gmail/accounts/:id`
 - `GET /api/emails`
@@ -184,3 +186,17 @@ Mas detalle en [docs/api.md](docs/api.md).
 - PostgreSQL/Prisma persiste usuarios, workspaces, tokens cifrados, correos, alertas, reglas, remitentes, settings y auditoria.
 
 Ver [docs/security.md](docs/security.md).
+
+Guias operativas relacionadas:
+
+- [Google Cloud OAuth](docs/google-oauth.md)
+- [Runbook de errores Gmail](docs/gmail-errors-runbook.md)
+- [Rotacion de secretos](docs/secrets-rotation.md)
+
+## Plan de desarrollo
+
+El plan vivo de desarrollo backend esta en [docs/backend-development-plan.md](docs/backend-development-plan.md). Ese documento ordena las fases de trabajo, criterios de terminado, ramas recomendadas y relacion con el backlog de [todo.md](todo.md).
+
+## Despliegue
+
+La guia de despliegue backend esta en [docs/deployment.md](docs/deployment.md). Incluye Docker Compose, migraciones, variables de entorno, healthcheck y backups PostgreSQL.

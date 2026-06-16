@@ -15,3 +15,7 @@ export const loginUserDto = z.object({
   password: z.string().min(1).max(120),
 });
 
+export const changePasswordDto = z.object({
+  currentPassword: z.string().min(1).max(120),
+  newPassword: z.string().min(8).max(120),
+});
