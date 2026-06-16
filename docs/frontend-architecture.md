@@ -8,6 +8,8 @@ El frontend web de Auto-Gmail-code es una aplicacion React + TypeScript creada c
 
 Sirve para que el usuario pueda iniciar sesion, revisar el estado del workspace, conectar o sincronizar cuentas Gmail, consultar correos, inspeccionar alertas, ver reglas automaticas y validar settings sin usar curl ni herramientas externas.
 
+La consola ya no es solo lectura: permite filtrar la bandeja, abrir detalle de correos, marcar correos como revisados o importantes, resolver o ignorar alertas y crear/pausar/activar reglas automaticas.
+
 ## Como funciona
 
 La aplicacion usa una arquitectura modular:
@@ -29,18 +31,31 @@ El flujo de datos es unidireccional:
 2. `App` llama un caso de uso o repositorio expuesto por `AppServices`.
 3. El repositorio usa `HttpClient`.
 4. `HttpClient` agrega el JWT cuando existe y llama la API.
-5. La respuesta se normaliza en el modulo.
+5. La respuesta se normaliza en el modulo cuando hace falta adaptar el contrato HTTP al modelo visual.
 6. El estado vuelve a React para renderizar el panel.
+
+Las operaciones con efectos laterales se coordinan en `App`:
+
+- El componente recibe callbacks tipados.
+- `App` ejecuta el repositorio del modulo.
+- Si la operacion termina bien, `WorkspaceOverviewService` vuelve a cargar el estado compartido.
+- Si falla, `ApiError` se convierte en un mensaje visible en el shell.
 
 ## Modulos actuales
 
 - `auth`: login, lectura de sesion y logout.
 - `gmail`: listado de cuentas, inicio OAuth y sync manual.
-- `emails`: bandeja reciente con categoria, riesgo y estado de lectura.
-- `alerts`: alertas abiertas por severidad y estado.
+- `emails`: bandeja reciente con filtros, detalle, categoria, scores, adjuntos y acciones de revision/importancia.
+- `alerts`: alertas abiertas por severidad con acciones de resolver o ignorar.
 - `analytics`: resumen, categorias, trafico por dia y remitentes top.
-- `rules`: reglas automaticas y conteo de aplicaciones.
-- `settings`: tema, idioma y URL de API activa.
+- `rules`: reglas automaticas, formulario de creacion rapida, activacion/pausa y conteo de aplicaciones.
+- `settings`: tema, idioma, URL de API activa, notificaciones, clasificacion y retencion.
+
+## Normalizacion de contratos
+
+El backend entrega correos con `classification` anidado. El modulo `emails` normaliza esa forma en `EmailApiRepository` para que los paneles reciban `primaryCategory`, `riskScore`, `importanceScore`, `securityScore`, `spamScore` y `actionRequired` como campos directos, manteniendo tambien el objeto `classification` para mostrar explicaciones.
+
+Esta decision deja la presentacion simple y evita duplicar conocimiento del contrato HTTP en componentes React.
 
 ## Infraestructura compartida
 
