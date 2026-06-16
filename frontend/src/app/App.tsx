@@ -7,6 +7,7 @@ import type {
 } from "../features/auth/domain/auth-session.entity";
 import { LoginPanel } from "../features/auth/presentation/LoginPanel";
 import type { EmailDetail, EmailListQuery } from "../features/emails/domain/email-message.entity";
+import type { GmailOAuthNotice } from "../features/gmail/domain/gmail-account.entity";
 import type { AutomationRule, CreateAutomationRuleInput } from "../features/rules/domain/automation-rule.entity";
 import { ApiError } from "../shared/infrastructure/http/http-client";
 import { createAppServices } from "./application/app-services";
@@ -29,12 +30,22 @@ const emptyOverview: WorkspaceOverview = {
 export function App() {
   const services = useMemo(() => createAppServices(), []);
   const initialToken = useMemo(() => services.tokenStorage.read(), [services]);
-  const [activeModule, setActiveModule] = useState<AppModule>("dashboard");
+  const initialGmailOAuthNotice = useMemo(() => readGmailOAuthNotice(), []);
+  const [activeModule, setActiveModule] = useState<AppModule>(initialGmailOAuthNotice ? "gmail" : "dashboard");
   const [error, setError] = useState<string | null>(null);
+  const [gmailOAuthNotice, setGmailOAuthNotice] = useState<GmailOAuthNotice | null>(initialGmailOAuthNotice);
   const [isLoading, setIsLoading] = useState(Boolean(initialToken));
   const [overview, setOverview] = useState<WorkspaceOverview>(emptyOverview);
   const [selectedEmail, setSelectedEmail] = useState<EmailDetail | null>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
+
+  useEffect(() => {
+    if (!initialGmailOAuthNotice) {
+      return;
+    }
+
+    window.history.replaceState({}, document.title, "/");
+  }, [initialGmailOAuthNotice]);
 
   useEffect(() => {
     if (!initialToken) {
@@ -118,9 +129,19 @@ export function App() {
 
   async function handleStartOAuth() {
     setError(null);
+    setGmailOAuthNotice(null);
 
     try {
       const oauth = await services.gmailRepository.startOAuth();
+      if (!oauth.configured) {
+        setActiveModule("gmail");
+        setGmailOAuthNotice({
+          status: "error",
+          message: "OAuth real de Google no esta configurado en el backend.",
+        });
+        return;
+      }
+
       window.location.assign(oauth.authUrl);
     } catch (cause) {
       setError(toMessage(cause));
@@ -241,6 +262,7 @@ export function App() {
       activeModule={activeModule}
       apiBaseUrl={services.apiBaseUrl}
       error={error}
+      gmailOAuthNotice={gmailOAuthNotice}
       isLoading={isLoading}
       overview={overview}
       session={session}
@@ -260,6 +282,37 @@ export function App() {
       selectedEmail={selectedEmail}
     />
   );
+}
+
+function readGmailOAuthNotice(): GmailOAuthNotice | null {
+  const params = new URLSearchParams(window.location.search);
+  const oauth = params.get("oauth");
+
+  if (!oauth) {
+    return null;
+  }
+
+  if (oauth === "success") {
+    const synced = Number(params.get("synced") ?? "0");
+    return {
+      status: "success",
+      message: "Cuenta Gmail registrada correctamente.",
+      email: params.get("email") ?? undefined,
+      synced: Number.isFinite(synced) ? synced : 0,
+    };
+  }
+
+  if (oauth === "demo") {
+    return {
+      status: "demo",
+      message: "El backend devolvio un flujo demo; faltan credenciales reales de Google.",
+    };
+  }
+
+  return {
+    status: "error",
+    message: params.get("error") ?? "Google no completo la autorizacion OAuth.",
+  };
 }
 
 function toMessage(cause: unknown): string {

@@ -551,6 +551,37 @@ select:focus,
   gap: 0.7rem;
 }
 
+.oauth-notice {
+  border: 1px solid rgba(51, 247, 255, 0.35);
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem;
+}
+
+.oauth-notice strong {
+  color: #ffffff;
+}
+
+.oauth-notice span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.oauth-notice--success {
+  border-color: rgba(156, 255, 46, 0.48);
+  box-shadow: 0 0 22px rgba(156, 255, 46, 0.14);
+}
+
+.oauth-notice--error {
+  border-color: rgba(255, 79, 109, 0.55);
+}
+
+.oauth-notice--demo {
+  border-color: rgba(255, 209, 102, 0.55);
+}
+
 .inbox-layout,
 .rules-layout {
   align-items: start;

@@ -5,6 +5,7 @@ import { AnalyticsPanel } from "../../features/analytics/presentation/AnalyticsP
 import type { AuthSession } from "../../features/auth/domain/auth-session.entity";
 import type { EmailDetail, EmailListQuery } from "../../features/emails/domain/email-message.entity";
 import { InboxPanel } from "../../features/emails/presentation/InboxPanel";
+import type { GmailOAuthNotice } from "../../features/gmail/domain/gmail-account.entity";
 import { GmailPanel } from "../../features/gmail/presentation/GmailPanel";
 import type { AutomationRule, CreateAutomationRuleInput } from "../../features/rules/domain/automation-rule.entity";
 import { RulesPanel } from "../../features/rules/presentation/RulesPanel";
@@ -18,6 +19,7 @@ interface CommandCenterProps {
   activeModule: AppModule;
   apiBaseUrl: string;
   error: string | null;
+  gmailOAuthNotice: GmailOAuthNotice | null;
   isLoading: boolean;
   overview: WorkspaceOverview;
   selectedEmail: EmailDetail | null;
@@ -41,6 +43,7 @@ export function CommandCenter({
   activeModule,
   apiBaseUrl,
   error,
+  gmailOAuthNotice,
   isLoading,
   overview,
   selectedEmail,
@@ -113,7 +116,12 @@ export function CommandCenter({
 
         {activeModule === "dashboard" ? <AnalyticsPanel overview={overview} /> : null}
         {activeModule === "gmail" ? (
-          <GmailPanel accounts={overview.accounts} onStartOAuth={onStartOAuth} onSyncAccount={onSyncAccount} />
+          <GmailPanel
+            accounts={overview.accounts}
+            oauthNotice={gmailOAuthNotice}
+            onStartOAuth={onStartOAuth}
+            onSyncAccount={onSyncAccount}
+          />
         ) : null}
         {activeModule === "emails" ? (
           <InboxPanel
