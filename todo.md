@@ -23,6 +23,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Readiness check en `/api/health/ready` con validacion de Prisma y configuracion OAuth Gmail.
 - CI backend en GitHub Actions con build, tests, migraciones, seed y prueba Prisma sobre PostgreSQL.
 - Sync Gmail usa `nextPageToken` en mensajes recientes e historial incremental.
+- Motor inicial de reglas automaticas durante Gmail Sync para correos nuevos.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -108,8 +109,6 @@ El sync actual cubre mensajes recientes e incremental con paginacion `nextPageTo
 El clasificador actual es heuristico. Falta:
 
 - Separar reglas internas del clasificador base.
-- Aplicar reglas automaticas reales sobre correos nuevos.
-- Registrar reglas que hicieron match.
 - Guardar explicacion mas estructurada:
   - senales detectadas,
   - reglas aplicadas,
@@ -120,20 +119,12 @@ El clasificador actual es heuristico. Falta:
 
 ### 9. Aplicacion real de reglas automaticas
 
-El CRUD de reglas existe, pero falta el motor:
+El CRUD de reglas ya tiene motor inicial durante sync para correos nuevos: evalua condiciones, aplica categoria/importancia/revision/spam/etiqueta interna, registra `actionHistory`, incrementa `timesApplied` y genera alertas cuando la regla lo solicita. Falta ampliar:
 
-- Evaluar condiciones sobre cada correo sincronizado.
-- Ejecutar acciones:
-  - asignar categoria,
-  - marcar importante,
-  - generar alerta,
-  - marcar revisar,
-  - ignorar spam,
-  - aplicar etiqueta interna,
-  - aplicar etiqueta Gmail si esta habilitado.
-- Incrementar `timesApplied`.
-- Registrar auditoria por regla aplicada.
-- Exponer reglas coincidentes en detalle de correo.
+- Aplicar etiqueta Gmail real con `users.messages.modify` si esta habilitado.
+- Registrar auditoria agregada por regla aplicada.
+- Exponer reglas coincidentes como campo estructurado en detalle de correo, no solo en `actionHistory`.
+- Evitar re-aplicacion manual sobre correos existentes salvo que el usuario lo solicite.
 
 ### 10. Adjuntos
 

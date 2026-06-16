@@ -10,6 +10,7 @@ import type { GmailAccountRepository } from "../domain/gmail-account.repository"
 import type { GmailSyncLogRepository } from "../domain/gmail-sync-log.repository";
 import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
 import { GoogleGmailClient, type SyncedGmailMessage } from "../infrastructure/google-gmail.client";
+import { AutomationRuleEngine, type AppliedAutomationRule } from "../../rules/application/automation-rule-engine.service";
 import { classifyGmailEmail } from "./gmail-email-classifier";
 
 export interface GmailSyncActor {
@@ -34,6 +35,7 @@ export class GmailSyncService {
     private readonly syncLogs: GmailSyncLogRepository,
     private readonly tokenVault: GmailTokenVault,
     private readonly gmailClient: GoogleGmailClient,
+    private readonly automationRuleEngine: AutomationRuleEngine,
   ) {}
 
   public async syncAccount(actor: GmailSyncActor, account: GmailAccount): Promise<GmailSyncResult | null> {
@@ -73,19 +75,24 @@ export class GmailSyncService {
 
       let createdMessages = 0;
       let updatedMessages = 0;
+      const appliedRules: AppliedAutomationRule[] = [];
       for (const gmailMessage of gmailMessages) {
-        const upsertResult = await this.emails.upsertByGmailMessageId(
-          this.mapMessage(actor.workspaceId, account, gmailMessage),
-        );
+        const mappedEmail = this.mapMessage(actor.workspaceId, account, gmailMessage);
+        const ruleApplication = await this.automationRuleEngine.applyToNewEmail(mappedEmail);
+        const upsertResult = await this.emails.upsertByGmailMessageId(ruleApplication.email);
 
         if (upsertResult.created) {
           createdMessages += 1;
+          appliedRules.push(...ruleApplication.appliedRules);
           await this.createDerivedAlert(upsertResult.email);
+          await this.createRuleAlerts(upsertResult.email, ruleApplication.appliedRules);
           await this.upsertSender(actor.workspaceId, upsertResult.email);
         } else {
           updatedMessages += 1;
         }
       }
+
+      await this.automationRuleEngine.incrementTimesApplied(appliedRules);
 
       const updatedAccount = await this.gmailAccounts.update(account.id, {
         emailAddress: profile.emailAddress,
@@ -109,6 +116,7 @@ export class GmailSyncService {
           fetchedMessages: gmailMessages.length,
           createdMessages,
           updatedMessages,
+          rulesApplied: summarizeAppliedRules(appliedRules),
           messagesTotal: profile.messagesTotal,
         },
         createdAt: new Date().toISOString(),
@@ -124,6 +132,7 @@ export class GmailSyncService {
           ...syncLog.metadata,
           messagesTotal: profile.messagesTotal,
           historyId: profile.historyId,
+          rulesApplied: summarizeAppliedRules(appliedRules),
         },
       });
 
@@ -278,6 +287,25 @@ export class GmailSyncService {
     });
   }
 
+  private async createRuleAlerts(email: EmailMessage, appliedRules: AppliedAutomationRule[]): Promise<void> {
+    for (const rule of appliedRules.filter((appliedRule) => appliedRule.generatedAlert)) {
+      await this.alerts.create({
+        id: randomUUID(),
+        workspaceId: email.workspaceId,
+        gmailAccountId: email.gmailAccountId,
+        emailMessageId: email.id,
+        type: "HIGH_IMPORTANCE",
+        severity: email.classification?.riskScore && email.classification.riskScore >= 75 ? "HIGH" : "MEDIUM",
+        title: `Regla "${rule.name}" genero una alerta`,
+        description: `La regla automatica "${rule.name}" hizo match con este correo.`,
+        status: "NEW",
+        recommendedAction: "Revisar el correo y validar las acciones automaticas aplicadas.",
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+      });
+    }
+  }
+
   private async createOperationalAlertIfMissing(
     account: GmailAccount,
     alert: {
@@ -399,6 +427,21 @@ function resolveAlertType(
   if (spamScore >= 80 || category === "SPAM_PROBABLE") return "POSSIBLE_SPAM";
   if (category === "LEGAL") return "LEGAL_NOTICE";
   return "HIGH_IMPORTANCE";
+}
+
+function summarizeAppliedRules(appliedRules: AppliedAutomationRule[]) {
+  const countsByRule = new Map<string, { id: string; name: string; count: number }>();
+
+  for (const rule of appliedRules) {
+    const current = countsByRule.get(rule.id);
+    countsByRule.set(rule.id, {
+      id: rule.id,
+      name: rule.name,
+      count: (current?.count ?? 0) + 1,
+    });
+  }
+
+  return Array.from(countsByRule.values());
 }
 
 interface GmailSyncFailure {

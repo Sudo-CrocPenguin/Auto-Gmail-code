@@ -60,3 +60,7 @@ Los campos variables como reglas, adjuntos, metadata de auditoria, settings y cl
 Cada request incluye `x-request-id` para trazabilidad entre frontend, API y logs. En ambientes distintos a `test`, el backend emite logs JSON con metodo, ruta, estado HTTP, duracion, IP, user agent y contexto autenticado cuando existe.
 
 `GET /api/health` es un liveness check basico. `GET /api/health/ready` es un readiness check operativo que valida PostgreSQL cuando el driver es Prisma y reporta si la configuracion OAuth Gmail esta completa.
+
+## Motor De Reglas
+
+El modulo `rules` expone CRUD HTTP y tambien un motor de aplicacion consumido por Gmail Sync. Durante la sincronizacion, cada correo nuevo se evalua contra reglas habilitadas del workspace, ordenadas por prioridad. Si una regla hace match, puede ajustar categoria, importancia, revision, senal de spam, etiquetas internas y solicitar una alerta. La aplicacion queda registrada en `actionHistory` del correo y `timesApplied` se incrementa por regla aplicada.

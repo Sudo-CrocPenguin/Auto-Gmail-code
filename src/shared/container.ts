@@ -42,6 +42,7 @@ import { CreateRuleUseCase } from "../features/rules/application/create-rule.use
 import { DeleteRuleUseCase } from "../features/rules/application/delete-rule.use-case";
 import { GetRuleDetailUseCase } from "../features/rules/application/get-rule-detail.use-case";
 import { ListRulesUseCase } from "../features/rules/application/list-rules.use-case";
+import { AutomationRuleEngine } from "../features/rules/application/automation-rule-engine.service";
 import { SetRuleEnabledUseCase } from "../features/rules/application/set-rule-enabled.use-case";
 import { UpdateRuleUseCase } from "../features/rules/application/update-rule.use-case";
 import { RuleController } from "../features/rules/presentation/http/rule.controller";
@@ -137,6 +138,7 @@ export function buildContainer(): ApplicationContainer {
   const oauthStateService = new OAuthStateService();
   const gmailTokenVault = new GmailTokenVault(gmailOAuthTokens, tokenEncryptionService);
   const googleGmailClient = new GoogleGmailClient();
+  const automationRuleEngine = new AutomationRuleEngine(rules);
   const gmailSyncService = new GmailSyncService(
     gmailAccounts,
     emails,
@@ -146,6 +148,7 @@ export function buildContainer(): ApplicationContainer {
     gmailSyncLogs,
     gmailTokenVault,
     googleGmailClient,
+    automationRuleEngine,
   );
   const authMiddleware = new AuthMiddleware(jwtService);
   const authRateLimit = new RateLimitMiddleware({
