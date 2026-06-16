@@ -78,6 +78,7 @@ function buildEmail(): EmailMessage {
     subject: "Contrato urgente",
     snippet: "Necesitamos revisar el contrato.",
     bodyHtml: "<p>Necesitamos revisar el contrato.</p>",
+    bodyText: "Necesitamos revisar el contrato.",
     receivedAt: "2026-06-16T00:00:00.000Z",
     labelIds: ["INBOX"],
     hasAttachments: false,

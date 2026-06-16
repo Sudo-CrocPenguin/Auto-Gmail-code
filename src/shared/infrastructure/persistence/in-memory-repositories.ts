@@ -275,6 +275,7 @@ export class InMemoryEmailMessageRepository implements EmailMessageRepository {
         (email) =>
           includesInsensitive(email.subject, search) ||
           includesInsensitive(email.snippet, search) ||
+          includesInsensitive(email.bodyText, search) ||
           includesInsensitive(email.fromEmail, search) ||
           includesInsensitive(email.fromName, search) ||
           includesInsensitive(email.fromDomain, search),

@@ -138,6 +138,7 @@ function mapEmail(email: Prisma.EmailMessageGetPayload<object>): EmailMessage {
     subject: email.subject,
     snippet: email.snippet,
     bodyHtml: email.bodyHtml,
+    bodyText: email.bodyText,
     receivedAt: toIsoRequired(email.receivedAt),
     labelIds: fromJson<string[]>(email.labelIds, []),
     hasAttachments: email.hasAttachments,
@@ -499,6 +500,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       subject: email.subject,
       snippet: email.snippet,
       bodyHtml: email.bodyHtml,
+      bodyText: email.bodyText,
       receivedAt: toDateRequired(email.receivedAt),
       labelIds: toJson(email.labelIds),
       hasAttachments: email.hasAttachments,
@@ -583,6 +585,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
         (email) =>
           includesInsensitive(email.subject, search) ||
           includesInsensitive(email.snippet, search) ||
+          includesInsensitive(email.bodyText, search) ||
           includesInsensitive(email.fromEmail, search) ||
           includesInsensitive(email.fromName, search) ||
           includesInsensitive(email.fromDomain, search),
@@ -620,6 +623,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
     if (data.reviewedAt !== undefined) updateData.reviewedAt = toDate(data.reviewedAt);
     if (data.actionHistory !== undefined) updateData.actionHistory = toJson(data.actionHistory);
     if (data.bodyHtml !== undefined) updateData.bodyHtml = data.bodyHtml;
+    if (data.bodyText !== undefined) updateData.bodyText = data.bodyText;
     if (data.labelIds !== undefined) updateData.labelIds = toJson(data.labelIds);
     if (data.attachments !== undefined) updateData.attachments = toJson(data.attachments);
 
@@ -642,6 +646,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       subject: email.subject,
       snippet: email.snippet,
       bodyHtml: email.bodyHtml,
+      bodyText: email.bodyText,
       receivedAt: toDateRequired(email.receivedAt),
       labelIds: toJson(email.labelIds),
       hasAttachments: email.hasAttachments,

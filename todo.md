@@ -26,6 +26,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Motor inicial de reglas automaticas durante Gmail Sync para correos nuevos.
 - Perfil de usuario y cambio de password autenticado.
 - Desconexion Gmail intenta revocar token OAuth remoto y registra resultado.
+- Correos persisten `bodyText` separado de `bodyHtml`.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -143,13 +144,12 @@ Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implem
 
 ### 11. HTML de correos mas seguro
 
-Ya se sanitiza HTML, pero falta reforzar:
+Ya se sanitiza HTML y se guarda `bodyText` separado para busqueda/fallback. Falta reforzar:
 
 - Validar enlaces externos.
 - Marcar dominios sospechosos.
 - Bloquear tracking pixels si se renderiza contenido remoto.
 - Reescribir links para abrir con advertencia si el risk score es alto.
-- Guardar `bodyText` separado de `bodyHtml` para busqueda y fallback.
 
 ### 12. Busqueda avanzada
 

@@ -268,6 +268,7 @@ export const openApiDocument = {
           subject: { type: "string" },
           snippet: { type: "string" },
           bodyHtml: { type: "string", nullable: true },
+          bodyText: { type: "string", nullable: true },
           receivedAt: { type: "string", format: "date-time" },
           labelIds: { type: "array", items: { type: "string" } },
           hasAttachments: { type: "boolean" },

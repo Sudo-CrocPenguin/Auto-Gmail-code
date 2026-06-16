@@ -115,6 +115,7 @@ model EmailMessage {
   subject        String
   snippet        String
   bodyHtml       String?
+  bodyText       String?
   receivedAt     DateTime
   labelIds       Json
   hasAttachments Boolean

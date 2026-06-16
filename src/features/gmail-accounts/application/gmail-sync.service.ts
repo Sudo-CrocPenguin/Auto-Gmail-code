@@ -231,6 +231,7 @@ export class GmailSyncService {
       subject: gmailMessage.headers.subject ?? "(sin asunto)",
       snippet: gmailMessage.snippet,
       bodyHtml,
+      bodyText: gmailMessage.bodyText,
       receivedAt: gmailMessage.receivedAt,
       labelIds: gmailMessage.labelIds,
       hasAttachments: gmailMessage.attachments.length > 0,
