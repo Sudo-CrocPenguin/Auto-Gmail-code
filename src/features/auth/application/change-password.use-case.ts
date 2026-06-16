@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { AuditLogRepository } from "../../audit/domain/audit-log.repository";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
 import { AppError } from "../../../shared/domain/errors/app-error";
+import type { AppSessionRepository } from "../domain/app-session.repository";
 import type { UserRepository } from "../domain/user.repository";
 
 export interface ChangePasswordInput {
@@ -15,6 +16,7 @@ export interface ChangePasswordInput {
 export class ChangePasswordUseCase {
   public constructor(
     private readonly users: UserRepository,
+    private readonly appSessions: AppSessionRepository,
     private readonly auditLogs: AuditLogRepository,
   ) {}
 
@@ -33,6 +35,11 @@ export class ChangePasswordUseCase {
       passwordHash: await hash(input.newPassword, 10),
     });
 
+    const now = new Date().toISOString();
+    const revokedSessions = await this.appSessions.revokeActiveByUser(user.id, now, {
+      exceptSessionId: context.sessionId,
+    });
+
     await this.auditLogs.create({
       id: randomUUID(),
       workspaceId: context.workspaceId,
@@ -42,8 +49,8 @@ export class ChangePasswordUseCase {
       entityId: user.id,
       description: "Usuario cambio su contrasena.",
       ip: input.ip,
-      metadata: {},
-      createdAt: new Date().toISOString(),
+      metadata: { revokedSessions },
+      createdAt: now,
     });
   }
 }

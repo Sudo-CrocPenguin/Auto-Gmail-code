@@ -4,6 +4,7 @@ import type { AuditLogRepository } from "../../audit/domain/audit-log.repository
 import { environment } from "../../../shared/config/environment";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import type { GmailOAuthStateRepository } from "../domain/gmail-oauth-state.repository";
 import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
 import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
 import { GmailSyncService } from "./gmail-sync.service";
@@ -19,6 +20,7 @@ export class HandleGmailOAuthCallbackUseCase {
   public constructor(
     private readonly auditLogs: AuditLogRepository,
     private readonly gmailAccounts: GmailAccountRepository,
+    private readonly oauthStates: GmailOAuthStateRepository,
     private readonly tokenVault: GmailTokenVault,
     private readonly gmailClient: GoogleGmailClient,
     private readonly gmailSyncService: GmailSyncService,
@@ -34,6 +36,23 @@ export class HandleGmailOAuthCallbackUseCase {
       return {
         redirectUrl: `${environment.frontendUrl}/gmail-accounts?oauth=error&error=${encodeURIComponent(
           message,
+        )}`,
+      };
+    }
+
+    const consumedState = await this.oauthStates.consume(
+      this.oauthStateService.hash(input.state ?? ""),
+      new Date().toISOString(),
+    );
+
+    if (!consumedState) {
+      await this.writeAudit(decodedState, "GMAIL_OAUTH_FAILED", "State OAuth reutilizado o expirado.", {
+        reason: "state_not_active",
+      });
+
+      return {
+        redirectUrl: `${environment.frontendUrl}/gmail-accounts?oauth=error&error=${encodeURIComponent(
+          "oauth_state_not_active",
         )}`,
       };
     }

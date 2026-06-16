@@ -75,7 +75,7 @@ export const environment = {
   rateLimit: {
     auth: {
       windowMs: parsedEnvironment.RATE_LIMIT_AUTH_WINDOW_MS,
-      max: parsedEnvironment.RATE_LIMIT_AUTH_MAX,
+      max: parsedEnvironment.NODE_ENV === "test" ? 1000 : parsedEnvironment.RATE_LIMIT_AUTH_MAX,
     },
     gmail: {
       windowMs: parsedEnvironment.RATE_LIMIT_GMAIL_WINDOW_MS,

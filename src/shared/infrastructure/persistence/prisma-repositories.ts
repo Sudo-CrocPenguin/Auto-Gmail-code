@@ -5,6 +5,8 @@ import type { Alert } from "../../../features/alerts/domain/alert.entity";
 import type { AlertQueryParams, AlertRepository } from "../../../features/alerts/domain/alert.repository";
 import type { AuditLog } from "../../../features/audit/domain/audit-log.entity";
 import type { AuditLogRepository, AuditQueryParams } from "../../../features/audit/domain/audit-log.repository";
+import type { AppSession } from "../../../features/auth/domain/app-session.entity";
+import type { AppSessionRepository } from "../../../features/auth/domain/app-session.repository";
 import type { User } from "../../../features/auth/domain/user.entity";
 import type { UserRepository } from "../../../features/auth/domain/user.repository";
 import type { EmailCategory } from "../../../features/emails/domain/email-category";
@@ -13,6 +15,8 @@ import type { EmailActionHistoryEntry, EmailAttachment, EmailMessage } from "../
 import type { EmailMessageRepository, EmailQueryParams } from "../../../features/emails/domain/email-message.repository";
 import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
+import type { StoredGmailOAuthState } from "../../../features/gmail-accounts/domain/gmail-oauth-state.entity";
+import type { GmailOAuthStateRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-state.repository";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
 import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
@@ -66,6 +70,21 @@ function mapUser(user: Prisma.UserGetPayload<object>): User {
   };
 }
 
+function mapAppSession(session: Prisma.AppSessionGetPayload<object>): AppSession {
+  return {
+    id: session.id,
+    workspaceId: session.workspaceId,
+    userId: session.userId,
+    role: session.role as AppSession["role"],
+    createdAt: toIsoRequired(session.createdAt),
+    expiresAt: toIsoRequired(session.expiresAt),
+    revokedAt: toIso(session.revokedAt),
+    lastUsedAt: toIso(session.lastUsedAt),
+    ip: session.ip,
+    userAgent: session.userAgent,
+  };
+}
+
 function mapWorkspace(workspace: Prisma.WorkspaceGetPayload<object>): Workspace {
   return {
     id: workspace.id,
@@ -89,6 +108,20 @@ function mapGmailAccount(account: Prisma.GmailAccountGetPayload<object>): GmailA
     grantedScopes: fromJson<string[]>(account.grantedScopes, []),
     errorMessage: account.errorMessage,
     createdAt: toIsoRequired(account.createdAt),
+  };
+}
+
+function mapGmailOAuthState(state: Prisma.GmailOAuthStateGetPayload<object>): StoredGmailOAuthState {
+  return {
+    id: state.id,
+    workspaceId: state.workspaceId,
+    userId: state.userId,
+    accountId: state.accountId,
+    nonce: state.nonce,
+    stateHash: state.stateHash,
+    createdAt: toIsoRequired(state.createdAt),
+    expiresAt: toIsoRequired(state.expiresAt),
+    consumedAt: toIso(state.consumedAt),
   };
 }
 
@@ -250,6 +283,73 @@ export class PrismaUserRepository implements UserRepository {
   }
 }
 
+export class PrismaAppSessionRepository implements AppSessionRepository {
+  public constructor(private readonly client: PrismaClient) {}
+
+  public async create(session: AppSession): Promise<AppSession> {
+    const createdSession = await this.client.appSession.create({
+      data: {
+        ...session,
+        createdAt: toDateRequired(session.createdAt),
+        expiresAt: toDateRequired(session.expiresAt),
+        revokedAt: toDate(session.revokedAt),
+        lastUsedAt: toDate(session.lastUsedAt),
+      },
+    });
+
+    return mapAppSession(createdSession);
+  }
+
+  public async findById(id: string): Promise<AppSession | null> {
+    const session = await this.client.appSession.findUnique({ where: { id } });
+    return session ? mapAppSession(session) : null;
+  }
+
+  public async touch(id: string, lastUsedAt: string): Promise<AppSession | null> {
+    const session = await this.client.appSession
+      .update({
+        where: { id },
+        data: { lastUsedAt: toDateRequired(lastUsedAt) },
+      })
+      .catch(() => null);
+
+    return session ? mapAppSession(session) : null;
+  }
+
+  public async revoke(id: string, revokedAt: string): Promise<AppSession | null> {
+    const session = await this.client.appSession
+      .update({
+        where: { id },
+        data: { revokedAt: toDateRequired(revokedAt) },
+      })
+      .catch(() => null);
+
+    return session ? mapAppSession(session) : null;
+  }
+
+  public async revokeActiveByUser(
+    userId: string,
+    revokedAt: string,
+    options: { exceptSessionId?: string } = {},
+  ): Promise<number> {
+    const where: Prisma.AppSessionWhereInput = {
+      userId,
+      revokedAt: null,
+    };
+
+    if (options.exceptSessionId) {
+      where.id = { not: options.exceptSessionId };
+    }
+
+    const result = await this.client.appSession.updateMany({
+      where,
+      data: { revokedAt: toDateRequired(revokedAt) },
+    });
+
+    return result.count;
+  }
+}
+
 export class PrismaWorkspaceRepository implements WorkspaceRepository {
   public constructor(private readonly client: PrismaClient) {}
 
@@ -363,6 +463,58 @@ export class PrismaGmailAccountRepository implements GmailAccountRepository {
   public async delete(id: string): Promise<boolean> {
     await this.client.gmailAccount.delete({ where: { id } }).catch(() => null);
     return true;
+  }
+}
+
+export class PrismaGmailOAuthStateRepository implements GmailOAuthStateRepository {
+  public constructor(private readonly client: PrismaClient) {}
+
+  public async create(state: StoredGmailOAuthState): Promise<StoredGmailOAuthState> {
+    const createdState = await this.client.gmailOAuthState.create({
+      data: {
+        ...state,
+        createdAt: toDateRequired(state.createdAt),
+        expiresAt: toDateRequired(state.expiresAt),
+        consumedAt: toDate(state.consumedAt),
+      },
+    });
+
+    return mapGmailOAuthState(createdState);
+  }
+
+  public async consume(stateHash: string, consumedAt: string): Promise<StoredGmailOAuthState | null> {
+    const result = await this.client.gmailOAuthState.updateMany({
+      where: {
+        stateHash,
+        consumedAt: null,
+        expiresAt: {
+          gt: toDateRequired(consumedAt),
+        },
+      },
+      data: {
+        consumedAt: toDateRequired(consumedAt),
+      },
+    });
+
+    if (result.count !== 1) {
+      return null;
+    }
+
+    const consumedState = await this.client.gmailOAuthState.findUnique({ where: { stateHash } });
+
+    return consumedState ? mapGmailOAuthState(consumedState) : null;
+  }
+
+  public async deleteExpired(now: string): Promise<number> {
+    const result = await this.client.gmailOAuthState.deleteMany({
+      where: {
+        expiresAt: {
+          lte: toDateRequired(now),
+        },
+      },
+    });
+
+    return result.count;
   }
 }
 

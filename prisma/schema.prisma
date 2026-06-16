@@ -17,6 +17,8 @@ model User {
   createdAt    DateTime
   workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   auditLogs    AuditLog[]
+  appSessions  AppSession[]
+  gmailOAuthStates GmailOAuthState[]
 
   @@index([workspaceId])
   @@map("users")
@@ -31,14 +33,53 @@ model Workspace {
   settings      Json?
   users         User[]
   gmailAccounts GmailAccount[]
+  gmailOAuthStates GmailOAuthState[]
   emails        EmailMessage[]
   alerts        Alert[]
   senders       SenderProfile[]
   rules         AutomationRule[]
   auditLogs     AuditLog[]
   syncLogs      GmailSyncLog[]
+  appSessions   AppSession[]
 
   @@map("workspaces")
+}
+
+model GmailOAuthState {
+  id          String    @id
+  workspaceId String
+  userId      String
+  accountId   String?
+  nonce       String
+  stateHash   String    @unique
+  createdAt   DateTime
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, expiresAt])
+  @@index([userId, consumedAt])
+  @@map("gmail_oauth_states")
+}
+
+model AppSession {
+  id         String    @id
+  workspaceId String
+  userId     String
+  role       String
+  createdAt  DateTime
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  ip         String?
+  userAgent  String?
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([workspaceId])
+  @@map("app_sessions")
 }
 
 model GmailAccount {

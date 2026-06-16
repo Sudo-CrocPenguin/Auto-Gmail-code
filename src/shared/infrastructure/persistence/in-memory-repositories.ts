@@ -1,9 +1,11 @@
 import { paginate } from "../../application/pagination";
 import type { AlertQueryParams, AlertRepository } from "../../../features/alerts/domain/alert.repository";
 import type { AuditLogRepository, AuditQueryParams } from "../../../features/audit/domain/audit-log.repository";
+import type { AppSessionRepository } from "../../../features/auth/domain/app-session.repository";
 import type { UserRepository } from "../../../features/auth/domain/user.repository";
 import type { EmailQueryParams, EmailMessageRepository } from "../../../features/emails/domain/email-message.repository";
 import type { GmailAccountRepository } from "../../../features/gmail-accounts/domain/gmail-account.repository";
+import type { GmailOAuthStateRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-state.repository";
 import type { GmailOAuthTokenRepository } from "../../../features/gmail-accounts/domain/gmail-oauth-token.repository";
 import type { GmailSyncLogQueryParams, GmailSyncLogRepository } from "../../../features/gmail-accounts/domain/gmail-sync-log.repository";
 import type { AutomationRuleRepository, RuleQueryParams } from "../../../features/rules/domain/automation-rule.repository";
@@ -49,6 +51,59 @@ export class InMemoryUserRepository implements UserRepository {
 
     Object.assign(user, data);
     return clone(user);
+  }
+}
+
+export class InMemoryAppSessionRepository implements AppSessionRepository {
+  public constructor(private readonly database: InMemoryDatabase) {}
+
+  public async create(session: Parameters<AppSessionRepository["create"]>[0]) {
+    this.database.appSessions.push(clone(session));
+    return clone(session);
+  }
+
+  public async findById(id: string) {
+    const session = this.database.appSessions.find((currentSession) => currentSession.id === id);
+    return session ? clone(session) : null;
+  }
+
+  public async touch(id: string, lastUsedAt: string) {
+    const session = this.database.appSessions.find((currentSession) => currentSession.id === id);
+    if (!session) {
+      return null;
+    }
+
+    session.lastUsedAt = lastUsedAt;
+    return clone(session);
+  }
+
+  public async revoke(id: string, revokedAt: string) {
+    const session = this.database.appSessions.find((currentSession) => currentSession.id === id);
+    if (!session) {
+      return null;
+    }
+
+    session.revokedAt = revokedAt;
+    return clone(session);
+  }
+
+  public async revokeActiveByUser(
+    userId: string,
+    revokedAt: string,
+    options: { exceptSessionId?: string } = {},
+  ) {
+    let revokedCount = 0;
+
+    for (const session of this.database.appSessions) {
+      if (session.userId !== userId || session.revokedAt || session.id === options.exceptSessionId) {
+        continue;
+      }
+
+      session.revokedAt = revokedAt;
+      revokedCount += 1;
+    }
+
+    return revokedCount;
   }
 }
 
@@ -140,6 +195,36 @@ export class InMemoryGmailAccountRepository implements GmailAccountRepository {
       (currentAccount) => currentAccount.id !== id,
     );
     return this.database.gmailAccounts.length !== initialLength;
+  }
+}
+
+export class InMemoryGmailOAuthStateRepository implements GmailOAuthStateRepository {
+  public constructor(private readonly database: InMemoryDatabase) {}
+
+  public async create(state: Parameters<GmailOAuthStateRepository["create"]>[0]) {
+    this.database.gmailOAuthStates.push(clone(state));
+    return clone(state);
+  }
+
+  public async consume(stateHash: string, consumedAt: string) {
+    const state = this.database.gmailOAuthStates.find(
+      (currentState) => currentState.stateHash === stateHash,
+    );
+
+    if (!state || state.consumedAt || new Date(state.expiresAt).getTime() <= new Date(consumedAt).getTime()) {
+      return null;
+    }
+
+    state.consumedAt = consumedAt;
+    return clone(state);
+  }
+
+  public async deleteExpired(now: string) {
+    const initialLength = this.database.gmailOAuthStates.length;
+    this.database.gmailOAuthStates = this.database.gmailOAuthStates.filter(
+      (state) => new Date(state.expiresAt).getTime() > new Date(now).getTime(),
+    );
+    return initialLength - this.database.gmailOAuthStates.length;
   }
 }
 
