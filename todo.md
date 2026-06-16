@@ -80,26 +80,12 @@ Actualmente `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` vienen de `.env`. Falta:
 
 ## P1 - Backend recomendado antes o durante el frontend MVP
 
-### 5. OpenAPI completo con schemas
+### 5. OpenAPI operativo para generacion de clientes
 
-El contrato actual enumera endpoints y parametros principales, pero falta enriquecerlo:
+El contrato ya incluye schemas principales, errores estandar, paginacion, request bodies base y responses para los endpoints MVP. Falta pulirlo para automatizacion del frontend:
 
-- Schemas completos para:
-  - `User`,
-  - `Workspace`,
-  - `GmailAccount`,
-  - `EmailMessage`,
-  - `EmailClassification`,
-  - `Alert`,
-  - `SenderProfile`,
-  - `AutomationRule`,
-  - `AuditLog`,
-  - `WorkspaceSettings`,
-  - errores,
-  - paginacion.
-- Request bodies completos.
-- Responses `200`, `201`, `204`, `400`, `401`, `403`, `404`, `409`, `429`, `500`.
-- Ejemplos de payload reales.
+- Completar ejemplos de payload reales en todos los endpoints.
+- Revisar request bodies de reglas, settings y acciones puntuales antes de generar cliente.
 - Exportar el contrato para que el frontend genere tipos si se desea.
 
 ### 6. Tests con PostgreSQL real
