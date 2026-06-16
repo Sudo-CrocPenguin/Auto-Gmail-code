@@ -47,6 +47,12 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schem
 JWT_SECRET=change-me-in-local-env
 JWT_EXPIRES_IN=1d
 TOKEN_ENCRYPTION_KEY=change-me-token-encryption-key
+RATE_LIMIT_AUTH_WINDOW_MS=900000
+RATE_LIMIT_AUTH_MAX=10
+RATE_LIMIT_GMAIL_WINDOW_MS=60000
+RATE_LIMIT_GMAIL_MAX=120
+RATE_LIMIT_SYNC_WINDOW_MS=300000
+RATE_LIMIT_SYNC_MAX=5
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:4000/api/gmail/oauth/callback
@@ -59,8 +65,14 @@ Reglas:
 - No subir `.env` al repositorio.
 - Cambiar `JWT_SECRET` en cualquier ambiente que no sea demo local.
 - Cambiar `TOKEN_ENCRYPTION_KEY` antes de conectar cuentas Gmail reales.
+- En `production`, `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` no pueden usar valores por defecto.
+- En `production`, `PERSISTENCE_DRIVER` debe ser `prisma` y `DATABASE_URL` es obligatorio.
 - Usar `PERSISTENCE_DRIVER=prisma` si necesitas persistencia real.
 - Usar `PERSISTENCE_DRIVER=memory` solo para pruebas rapidas o tests.
+- Ajustar rate limits segun ambiente:
+  - `RATE_LIMIT_AUTH_*` protege login.
+  - `RATE_LIMIT_GMAIL_*` protege endpoints Gmail generales.
+  - `RATE_LIMIT_SYNC_*` protege sincronizaciones manuales.
 
 ## 4. Modo rapido en memoria
 
@@ -343,4 +355,3 @@ debe funcionar.
 - `POST /api/gmail/oauth/start` devuelve `authUrl`.
 - Despues de OAuth, `/api/gmail/accounts` muestra cuenta.
 - `/api/emails` muestra correos sincronizados.
-

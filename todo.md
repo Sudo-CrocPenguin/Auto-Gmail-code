@@ -59,17 +59,7 @@ Falta una prueba manual completa con Google Cloud:
 - Confirmar que `/api/emails` muestra mensajes reales.
 - Confirmar que `/api/gmail/accounts/:id/sync` actualiza datos despues de nuevos correos.
 
-### 3. Rate limiting
-
-Agregar proteccion contra abuso:
-
-- Rate limit por IP para `/api/auth/login`.
-- Rate limit por usuario para endpoints Gmail.
-- Rate limit por workspace para sincronizaciones manuales.
-- Respuesta clara `429 TOO_MANY_REQUESTS`.
-- Auditoria opcional de intentos bloqueados.
-
-### 4. Manejo formal de refresh tokens revocados
+### 3. Manejo formal de refresh tokens revocados
 
 Cuando Gmail API rechace credenciales:
 
@@ -80,19 +70,17 @@ Cuando Gmail API rechace credenciales:
 - Crear alerta `ACCOUNT_RECONNECT_REQUIRED`.
 - Registrar auditoria `GMAIL_TOKEN_REVOKED` o `GMAIL_RECONNECT_REQUIRED`.
 
-### 5. Hardening de secretos
+### 4. Hardening de secretos
 
 Actualmente `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` vienen de `.env`. Falta:
 
-- Validar que en `production` no se usen valores por defecto.
-- Requerir longitud minima fuerte.
 - Documentar rotacion de `TOKEN_ENCRYPTION_KEY`.
 - Definir estrategia de re-cifrado de tokens si cambia la clave.
 - Evitar logs accidentales de variables sensibles.
 
 ## P1 - Backend recomendado antes o durante el frontend MVP
 
-### 6. OpenAPI completo con schemas
+### 5. OpenAPI completo con schemas
 
 El contrato actual enumera endpoints y parametros principales, pero falta enriquecerlo:
 
@@ -114,7 +102,7 @@ El contrato actual enumera endpoints y parametros principales, pero falta enriqu
 - Ejemplos de payload reales.
 - Exportar el contrato para que el frontend genere tipos si se desea.
 
-### 7. Tests con PostgreSQL real
+### 6. Tests con PostgreSQL real
 
 Los tests actuales usan memoria. Falta suite con DB:
 
@@ -128,7 +116,7 @@ Los tests actuales usan memoria. Falta suite con DB:
 - Probar auditoria persistida.
 - Probar desconexion Gmail eliminando tokens.
 
-### 8. Gmail sync mas completo
+### 7. Gmail sync mas completo
 
 El sync actual cubre mensajes recientes e incremental basico. Falta:
 
@@ -142,7 +130,7 @@ El sync actual cubre mensajes recientes e incremental basico. Falta:
 - Permitir sync por rango de fechas.
 - Permitir sync inicial profundo por lotes.
 
-### 9. Tabla de logs de sincronizacion
+### 8. Tabla de logs de sincronizacion
 
 Crear entidad `SyncLog` o `GmailSyncJob`:
 
@@ -163,7 +151,7 @@ Endpoints sugeridos:
 - `GET /api/gmail/accounts/:id/sync-logs`
 - `GET /api/gmail/accounts/:id/sync-logs/:logId`
 
-### 10. Clasificacion mas precisa
+### 9. Clasificacion mas precisa
 
 El clasificador actual es heuristico. Falta:
 
@@ -178,7 +166,7 @@ El clasificador actual es heuristico. Falta:
 - Permitir feedback de usuario para mejorar reglas futuras.
 - Definir si se usara IA despues y bajo que permisos.
 
-### 11. Aplicacion real de reglas automaticas
+### 10. Aplicacion real de reglas automaticas
 
 El CRUD de reglas existe, pero falta el motor:
 
@@ -195,7 +183,7 @@ El CRUD de reglas existe, pero falta el motor:
 - Registrar auditoria por regla aplicada.
 - Exponer reglas coincidentes en detalle de correo.
 
-### 12. Adjuntos
+### 11. Adjuntos
 
 Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implementar:
 
@@ -208,7 +196,7 @@ Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implem
   - `GET /api/emails/:id/attachments/:attachmentId`
 - Evitar guardar adjuntos completos en DB salvo decision explicita.
 
-### 13. HTML de correos mas seguro
+### 12. HTML de correos mas seguro
 
 Ya se sanitiza HTML, pero falta reforzar:
 
@@ -218,7 +206,7 @@ Ya se sanitiza HTML, pero falta reforzar:
 - Reescribir links para abrir con advertencia si el risk score es alto.
 - Guardar `bodyText` separado de `bodyHtml` para busqueda y fallback.
 
-### 14. Busqueda avanzada
+### 13. Busqueda avanzada
 
 La busqueda actual funciona para MVP. Falta:
 
@@ -228,7 +216,7 @@ La busqueda actual funciona para MVP. Falta:
 - Ordenamiento por scores desde JSONB o columnas materializadas.
 - Paginacion estable por cursor para bandejas grandes.
 
-### 15. RBAC y colaboradores
+### 14. RBAC y colaboradores
 
 Actualmente el rol viene en usuario, pero falta modelo completo:
 
@@ -248,7 +236,7 @@ Actualmente el rol viene en usuario, pero falta modelo completo:
   - `PATCH /api/workspaces/current/members/:id`
   - `DELETE /api/workspaces/current/members/:id`
 
-### 16. Gestion de perfil y password
+### 15. Gestion de perfil y password
 
 Faltan endpoints:
 
@@ -258,7 +246,7 @@ Faltan endpoints:
 - `POST /api/auth/reset-password`
 - invalidacion de tokens tras cambio de password.
 
-### 17. Sesiones
+### 16. Sesiones
 
 El JWT actual es stateless. Falta definir:
 
@@ -269,7 +257,7 @@ El JWT actual es stateless. Falta definir:
 - Lista de dispositivos activos.
 - Expiracion configurable.
 
-### 18. Auditoria mas fuerte
+### 17. Auditoria mas fuerte
 
 La auditoria existe. Falta mejorar:
 
@@ -280,7 +268,7 @@ La auditoria existe. Falta mejorar:
 - Retencion automatica segun settings.
 - Endpoint de exportacion.
 
-### 19. Observabilidad
+### 18. Observabilidad
 
 Agregar:
 
@@ -298,7 +286,7 @@ Agregar:
   - Prisma conectado,
   - config Gmail presente.
 
-### 20. Manejo centralizado de errores Gmail API
+### 19. Manejo centralizado de errores Gmail API
 
 Agregar traductor de errores:
 
@@ -310,7 +298,7 @@ Agregar traductor de errores:
 
 ## P2 - Mejoras importantes despues del front MVP
 
-### 21. Gmail Pub/Sub Watch
+### 20. Gmail Pub/Sub Watch
 
 Para tiempo real real:
 
@@ -322,7 +310,7 @@ Para tiempo real real:
 - Renovar watch antes de expirar.
 - Usar Gmail history API desde `historyId`.
 
-### 22. Cola de trabajos
+### 21. Cola de trabajos
 
 La sincronizacion deberia salir del request HTTP:
 
@@ -336,7 +324,7 @@ La sincronizacion deberia salir del request HTTP:
 - Reintentos con backoff.
 - Idempotencia por job.
 
-### 23. Notificaciones
+### 22. Notificaciones
 
 Definir:
 
@@ -346,7 +334,7 @@ Definir:
 - Notificaciones por alerta critica.
 - Preferencias por usuario/workspace.
 
-### 24. Exportacion de datos
+### 23. Exportacion de datos
 
 Endpoints posibles:
 
@@ -363,7 +351,7 @@ Considerar:
 - permisos,
 - auditoria.
 
-### 25. Eliminacion y retencion de datos
+### 24. Eliminacion y retencion de datos
 
 Falta:
 
@@ -374,7 +362,7 @@ Falta:
 - Borrado de cuenta de usuario.
 - Revocacion OAuth al desconectar Gmail.
 
-### 26. Seguridad avanzada
+### 25. Seguridad avanzada
 
 - MFA.
 - Deteccion de login sospechoso.
@@ -384,7 +372,7 @@ Falta:
 - CSRF si se usan cookies.
 - CSP para frontend futuro.
 
-### 27. Versionado de API
+### 26. Versionado de API
 
 Antes de produccion publica:
 
@@ -393,7 +381,7 @@ Antes de produccion publica:
 - Politica de deprecacion.
 - Compatibilidad frontend/back.
 
-### 28. Docker y despliegue
+### 27. Docker y despliegue
 
 Falta:
 
@@ -405,7 +393,7 @@ Falta:
 - estrategia de backups y restauracion PostgreSQL.
 - documentar despliegue.
 
-### 29. Calidad y CI
+### 28. Calidad y CI
 
 Agregar:
 
@@ -417,7 +405,7 @@ Agregar:
 - Escaneo de dependencias.
 - Validacion de migraciones.
 
-### 30. Documentacion operativa avanzada
+### 29. Documentacion operativa avanzada
 
 Crear o ampliar:
 

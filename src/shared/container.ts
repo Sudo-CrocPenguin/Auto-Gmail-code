@@ -68,6 +68,7 @@ import { createAuthRouter } from "../features/auth/presentation/http/auth.routes
 import { environment } from "./config/environment";
 import { AppError } from "./domain/errors/app-error";
 import { AuthMiddleware } from "./http/middlewares/auth.middleware";
+import { RateLimitMiddleware } from "./http/middlewares/rate-limit.middleware";
 import { createSeededInMemoryDatabase } from "./infrastructure/persistence/in-memory-database";
 import {
   InMemoryAlertRepository,
@@ -141,6 +142,20 @@ export function buildContainer(): ApplicationContainer {
     googleGmailClient,
   );
   const authMiddleware = new AuthMiddleware(jwtService);
+  const authRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.auth,
+    keyPrefix: "auth",
+  });
+  const gmailRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.gmail,
+    keyPrefix: "gmail",
+    keyGenerator: (request) => request.auth?.workspaceId ?? request.ip ?? "unknown",
+  });
+  const syncRateLimit = new RateLimitMiddleware({
+    ...environment.rateLimit.sync,
+    keyPrefix: "gmail-sync",
+    keyGenerator: (request) => request.auth?.workspaceId ?? request.ip ?? "unknown",
+  });
 
   return composeApplication({
     users,
@@ -154,6 +169,9 @@ export function buildContainer(): ApplicationContainer {
     settings,
     jwtService,
     authMiddleware,
+    authRateLimit,
+    gmailRateLimit,
+    syncRateLimit,
     gmailTokenVault,
     googleGmailClient,
     gmailSyncService,
@@ -209,6 +227,9 @@ interface ComposedApplicationDependencies {
   settings: InMemoryWorkspaceSettingsRepository | PrismaWorkspaceSettingsRepository;
   jwtService: JwtService;
   authMiddleware: AuthMiddleware;
+  authRateLimit: RateLimitMiddleware;
+  gmailRateLimit: RateLimitMiddleware;
+  syncRateLimit: RateLimitMiddleware;
   gmailTokenVault: GmailTokenVault;
   googleGmailClient: GoogleGmailClient;
   gmailSyncService: GmailSyncService;
@@ -302,9 +323,14 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
 
   return {
     routes: {
-      auth: createAuthRouter(authController, dependencies.authMiddleware),
+      auth: createAuthRouter(authController, dependencies.authMiddleware, dependencies.authRateLimit),
       workspace: createWorkspaceRouter(workspaceController, dependencies.authMiddleware),
-      gmail: createGmailAccountRouter(gmailAccountController, dependencies.authMiddleware),
+      gmail: createGmailAccountRouter(
+        gmailAccountController,
+        dependencies.authMiddleware,
+        dependencies.gmailRateLimit,
+        dependencies.syncRateLimit,
+      ),
       emails: createEmailRouter(emailController, dependencies.authMiddleware),
       alerts: createAlertRouter(alertController, dependencies.authMiddleware),
       senders: createSenderRouter(senderController, dependencies.authMiddleware),
