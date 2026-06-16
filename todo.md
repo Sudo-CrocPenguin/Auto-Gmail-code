@@ -1,170 +1,421 @@
-# TODO Backend Auto-Gmail-code
+# TODO y contexto Backend Auto-Gmail-code
 
-Este documento lista lo que falta o conviene reforzar en el backend despues de la primera version robusta. El backend actual ya tiene API modular, OAuth Gmail real, sincronizacion inicial/incremental, PostgreSQL con Prisma, settings, auditoria y contrato OpenAPI base. Lo pendiente se organiza por prioridad para continuar sin bloquear el inicio del frontend.
+Ultima actualizacion: 2026-06-16.
 
-## Estado actual resumido
+Este archivo es la memoria operativa del backend. Debe servir para retomar el proyecto aunque se cierre el chat: explica que es la app, como funciona, que se hizo, que falta y donde mirar.
 
-- API Express + TypeScript con arquitectura modular por feature.
-- Autenticacion JWT Bearer.
-- Registro, login, logout y `/api/auth/me`.
+## Contexto del aplicativo
+
+Auto-Gmail-code es una aplicacion para administrar una o mas cuentas Gmail desde un panel propio. El usuario conecta Gmail mediante OAuth, nunca entregando su contrasena Gmail. Desde el backend se sincronizan correos, se clasifican, se generan alertas, se gestionan reglas automaticas, remitentes, auditoria, settings y analitica.
+
+Por ahora solo se esta desarrollando backend. El frontend vendra despues y deberia consumir el contrato OpenAPI expuesto por la API.
+
+## Reglas de trabajo vigentes
+
+- Rama actual de trabajo: `feature/backend-v1-readiness`.
+- Base GitFlow: las features nacen desde `develop`.
+- No hacer `git push`; queda reservado para el usuario.
+- Commits progresivos y descriptivos en espanol, manteniendo prefijos convencionales: `feat`, `fix`, `docs`, `test`, `ci`, `chore`, etc.
+- Cada vez que se complete algo del backlog, quitarlo o actualizarlo aqui.
+- Si aparece trabajo nuevo, agregarlo aqui con contexto.
+- Mantener arquitectura modular, DDD y POO.
+- Documentar con claridad: que es, para que sirve y como funciona.
+
+## Stack y arquitectura actual
+
+- Runtime: Node.js 20+.
+- Lenguaje: TypeScript.
+- HTTP: Express.
+- Validacion: Zod.
+- Persistencia: driver seleccionable.
+  - `memory`: seed demo en memoria para desarrollo rapido y tests.
+  - `prisma`: PostgreSQL mediante Prisma Client y migraciones.
+- Seguridad:
+  - JWT Bearer para sesion propia.
+  - OAuth Gmail para cuentas Google.
+  - Tokens Gmail cifrados con AES-256-GCM.
+  - Rate limiting en login y rutas Gmail.
+- Arquitectura por feature:
+  - `domain`: entidades y contratos.
+  - `application`: casos de uso.
+  - `presentation/http`: rutas, DTOs y controladores.
+  - `shared/infrastructure`: Prisma, memoria, JWT, cifrado, logger.
+
+## Como correr el backend
+
+Modo memoria:
+
+```bash
+npm run dev
+```
+
+Modo Prisma local:
+
+```bash
+docker compose up -d postgres
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public npm run db:deploy
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public npm run db:seed
+PERSISTENCE_DRIVER=prisma DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public npm run dev
+```
+
+URLs utiles:
+
+- API: `http://localhost:4000`
+- Health: `http://localhost:4000/api/health`
+- Readiness: `http://localhost:4000/api/health/ready`
+- OpenAPI: `http://localhost:4000/api/openapi.json`
+
+Usuario demo en memoria o seed Prisma:
+
+```txt
+email: owner@autogmail.local
+password: Password123!
+```
+
+## Validacion ejecutada
+
+Ultima validacion conocida en esta rama:
+
+```bash
+npm run check
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run db:deploy
+PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run test:prisma
+```
+
+Resultado conocido:
+
+- Build TypeScript pasando.
+- Tests HTTP/memoria pasando.
+- Test unitario de motor de reglas pasando.
+- Test Prisma contra PostgreSQL real pasando.
+- Migraciones aplicadas en PostgreSQL real.
+- API respondiendo en `http://localhost:4000`.
+
+## Documentacion existente
+
+- `README.md`: vision general del backend.
+- `README.execution.md`: ejecucion local, endpoints de verificacion y variables.
+- `docs/architecture.md`: arquitectura modular y flujo de requests.
+- `docs/api.md`: resumen de API para frontend.
+- `docs/database.md`: Prisma, migraciones y DB real.
+- `docs/deployment.md`: Docker, deploy, healthchecks, backups.
+- `docs/security.md`: seguridad aplicada y pendientes.
+- `docs/backend-development-plan.md`: plan de desarrollo backend.
+- `docs/google-oauth.md`: configuracion Google Cloud OAuth.
+- `docs/gmail-errors-runbook.md`: errores Gmail y reconexion.
+- `docs/secrets-rotation.md`: rotacion de `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY`.
+
+## Commits relevantes ya hechos en la rama
+
+- `docs: crear plan de desarrollo backend`
+- `feat: proteger login y sincronizacion con rate limiting`
+- `feat: registrar logs de sincronizacion gmail`
+- `docs: ampliar contrato openapi del backend`
+- `fix: manejar errores operativos de gmail`
+- `chore: preparar despliegue docker del backend`
+- `test: agregar validacion prisma con base real`
+- `feat: agregar readiness y trazabilidad de requests`
+- `ci: validar backend con postgres en pull requests`
+- `feat: paginar sincronizacion gmail con nextpagetoken`
+- `feat: aplicar reglas automaticas en sincronizacion`
+- `feat: gestionar perfil y password de usuario`
+- `fix: revocar oauth gmail al desconectar cuenta`
+- `feat: guardar texto plano de correos`
+- `feat: descargar adjuntos gmail bajo demanda`
+- `docs: documentar oauth errores gmail y secretos`
+
+## Lo que ya esta hecho
+
+### Base backend
+
+- API Express + TypeScript modular.
+- Contenedor manual de dependencias en `src/shared/container.ts`.
+- Rutas agrupadas por feature.
+- Manejo centralizado de errores.
+- Validacion con Zod.
+- OpenAPI en `/api/openapi.json`.
+- CORS, Helmet y JSON body limit.
+
+### Auth y usuarios
+
+- Registro de usuario propietario.
+- Login con JWT.
+- Logout auditado.
+- `/api/auth/me`.
+- `PATCH /api/users/me` para actualizar perfil.
+- `PATCH /api/auth/password` para cambiar password con password actual.
+- Rate limiting en login y cambio de password.
+
+### Workspace y settings
+
 - Workspace actual.
-- Persistencia seleccionable con `PERSISTENCE_DRIVER=memory` o `PERSISTENCE_DRIVER=prisma`.
-- PostgreSQL mediante Prisma.
-- Migracion inicial y seed demo.
-- OAuth Gmail real con `state` firmado y expiracion de 10 minutos.
-- Tokens Gmail cifrados con AES-256-GCM.
-- Sync Gmail inicial y sync incremental con `historyId` cuando Gmail lo permite.
-- Bandeja unificada, detalle de correo, filtros, clasificacion visible y correccion manual.
-- Alertas, remitentes, reglas, analitica, auditoria y settings.
-- OpenAPI base en `/api/openapi.json`.
-- Tests de integracion principales.
-- Request ID en respuestas y logs.
-- Logger estructurado JSON para requests y errores.
-- Readiness check en `/api/health/ready` con validacion de Prisma y configuracion OAuth Gmail.
-- CI backend en GitHub Actions con build, tests, migraciones, seed y prueba Prisma sobre PostgreSQL.
-- Sync Gmail usa `nextPageToken` en mensajes recientes e historial incremental.
-- Motor inicial de reglas automaticas durante Gmail Sync para correos nuevos.
-- Perfil de usuario y cambio de password autenticado.
-- Desconexion Gmail intenta revocar token OAuth remoto y registra resultado.
-- Correos persisten `bodyText` separado de `bodyHtml`.
-- Descarga de adjuntos bajo demanda con limite de tamano y bloqueo basico de ejecutables.
+- Actualizacion de workspace para owner/admin.
+- Settings de workspace.
+- Settings persistidos en memoria o Prisma.
 
-## P0 - Pendiente critico antes de produccion
+### Gmail OAuth y cuentas
 
-### 1. Persistencia Prisma validada contra una base real
+- Inicio OAuth Gmail con `state` firmado y expiracion.
+- Callback OAuth.
+- Guardado de tokens Gmail cifrados.
+- Listado de cuentas Gmail.
+- Reconnect Gmail.
+- Disconnect Gmail.
+- Disconnect intenta revocar token OAuth remoto y siempre elimina credenciales locales.
+- Guia Google OAuth documentada.
 
-Ya se valido PostgreSQL real con Docker: migraciones `db:deploy`, seed demo y `npm run test:prisma` contra `auto_gmail_code_test`. Falta la verificacion manual completa con la API corriendo en modo Prisma:
+### Sincronizacion Gmail
 
-- Arrancar con `PERSISTENCE_DRIVER=prisma`.
-- Validar login con usuario demo.
+- Sync inicial de mensajes recientes.
+- Sync incremental con `historyId` cuando Gmail lo permite.
+- Paginacion con `nextPageToken` en `users.messages.list`.
+- Paginacion con `nextPageToken` en `users.history.list`.
+- Logs de sync en `gmail_sync_logs`.
+- Endpoints:
+  - `GET /api/gmail/accounts/:id/sync-logs`
+  - `GET /api/gmail/accounts/:id/sync-logs/:logId`
+- Manejo base de errores Gmail:
+  - token revocado,
+  - rate limit,
+  - quota exceeded,
+  - historyId no recuperable,
+  - errores desconocidos.
+
+### Correos
+
+- Bandeja unificada.
+- Detalle de correo.
+- Filtros por cuenta, remitente, dominio, categoria, scores, fechas, adjuntos, lectura.
+- Correccion manual de clasificacion.
+- Marcar revisado.
+- Marcar importante.
+- `bodyHtml` y `bodyText` separados.
+- HTML sanitizado antes de responder detalle.
+
+### Adjuntos
+
+- Metadata de adjuntos guardada.
+- `GET /api/emails/:id/attachments/:attachmentId`.
+- Descarga bajo demanda desde Gmail.
+- No hay descarga masiva por defecto.
+- Limite por `GMAIL_ATTACHMENT_MAX_BYTES`.
+- Bloqueo basico de MIME/extensiones ejecutables.
+- El contenido no se guarda completo en DB.
+
+### Clasificacion, alertas y reglas
+
+- Clasificador heuristico inicial.
+- Alertas derivadas por seguridad, riesgo, importancia y spam probable.
+- CRUD de reglas automaticas.
+- Motor inicial de reglas durante sync para correos nuevos:
+  - evalua condiciones,
+  - asigna categoria,
+  - marca importante,
+  - genera alerta,
+  - marca revisar,
+  - ignora spam,
+  - aplica etiqueta interna,
+  - registra `actionHistory`,
+  - incrementa `timesApplied`.
+
+### Remitentes, analitica y auditoria
+
+- Perfiles de remitentes.
+- Marcar remitente confiable o sospechoso.
+- Listar correos por remitente.
+- Analitica resumen, categorias, top remitentes, emails por dia y cuentas.
+- Auditoria paginada.
+- Acciones sensibles registradas.
+
+### Persistencia y despliegue
+
+- Prisma schema.
+- Migraciones:
+  - `20260615190000_initial_schema`
+  - `20260616153000_add_gmail_sync_logs`
+  - `20260616172000_add_email_body_text`
+- Seed demo Prisma.
+- Dockerfile.
+- Docker Compose con PostgreSQL y API.
+- `.dockerignore`.
+- Healthcheck de contenedor.
+- Readiness `/api/health/ready`.
+- CI GitHub Actions con PostgreSQL:
+  - `npm ci`,
+  - Prisma generate,
+  - `npm run check`,
+  - migraciones,
+  - seed,
+  - `npm run test:prisma`.
+
+### Observabilidad
+
+- `x-request-id` por request.
+- Logger JSON para requests y errores.
+- Readiness con checks de DB y config OAuth Gmail.
+
+## Pendiente P0 - critico antes de produccion real
+
+### P0.1 Verificacion manual Prisma end-to-end
+
+Ya se valido Prisma contra PostgreSQL real con migraciones, seed y test de repositorios. Falta validar manualmente con la API corriendo en modo Prisma:
+
+- Arrancar API con `PERSISTENCE_DRIVER=prisma`.
+- Login con usuario demo.
+- Crear/editar settings.
 - Conectar Gmail real.
-- Verificar que al reiniciar el servidor se conservan:
-  - usuario demo,
+- Sincronizar Gmail real.
+- Reiniciar API.
+- Confirmar persistencia de:
+  - usuario,
   - workspace,
   - settings,
-  - cuenta Gmail conectada,
+  - cuentas Gmail,
   - tokens cifrados,
-  - correos sincronizados,
+  - correos,
   - alertas,
   - remitentes,
   - reglas,
-  - auditoria.
+  - auditoria,
+  - logs de sync.
 
-### 2. Verificacion end-to-end de Gmail real
+### P0.2 Verificacion Gmail real con Google Cloud
 
-Falta una prueba manual completa con Google Cloud:
+Bloqueado hasta tener credenciales Google reales.
 
-- Crear OAuth Client real.
-- Configurar redirect URI autorizado.
+Checklist:
+
+- Crear proyecto Google Cloud.
+- Habilitar Gmail API.
+- Crear OAuth Client Web.
+- Configurar redirect URI.
 - Configurar scopes.
-- Ejecutar `/api/gmail/oauth/start`.
+- Definir:
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
+  - `GOOGLE_OAUTH_REDIRECT_URI`
+- Ejecutar `POST /api/gmail/oauth/start`.
 - Abrir `authUrl`.
 - Aceptar permisos.
-- Volver a `/api/gmail/oauth/callback`.
-- Confirmar que se crea la cuenta en `gmail_accounts`.
-- Confirmar que se guarda token cifrado en `gmail_oauth_tokens`.
-- Confirmar que `/api/emails` muestra mensajes reales.
-- Confirmar que `/api/gmail/accounts/:id/sync` actualiza datos despues de nuevos correos.
+- Volver al callback.
+- Confirmar cuenta creada en `gmail_accounts`.
+- Confirmar token cifrado en `gmail_oauth_tokens`.
+- Confirmar correos reales en `/api/emails`.
+- Confirmar sync incremental despues de recibir nuevos correos.
+- Probar al menos dos cuentas Gmail.
 
-### 3. Manejo formal de refresh tokens revocados
+### P0.3 Refresh tokens revocados
 
-Cuando Gmail API rechace credenciales:
+Ya se detecta token revocado y se marca cuenta como `RECONNECT_REQUIRED`. Falta:
 
-- Definir estrategia fina para limpiar access token vencido sin perder informacion recuperable.
+- Definir estrategia fina para limpiar access token vencido sin perder refresh recuperable.
+- Decidir si se borra access token local al detectar `invalid_grant`.
+- Automatizar aviso de soporte o UI para reconexion.
+- Probar con token revocado real.
 
-### 4. Hardening de secretos
+### P0.4 Re-cifrado de tokens
 
-Actualmente `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` vienen de `.env`. Falta:
+Ya existe guia en `docs/secrets-rotation.md`. Falta implementar:
 
-- Definir estrategia de re-cifrado de tokens si cambia la clave.
-- Evitar logs accidentales de variables sensibles.
+- Script de re-cifrado de `gmail_oauth_tokens`.
+- Soporte temporal para clave vieja y clave nueva.
+- Backup previo automatizado o documentado en script.
+- Prueba en staging.
 
-## P1 - Backend recomendado antes o durante el frontend MVP
+### P0.5 Logs sensibles
 
-### 5. OpenAPI operativo para generacion de clientes
+Falta auditoria especifica para asegurar que no se impriman:
 
-El contrato ya incluye schemas principales, errores estandar, paginacion, request bodies base y responses para los endpoints MVP. Falta pulirlo para automatizacion del frontend:
+- access tokens,
+- refresh tokens,
+- id tokens,
+- `TOKEN_ENCRYPTION_KEY`,
+- `JWT_SECRET`,
+- variables completas de entorno.
 
-- Completar ejemplos de payload reales en todos los endpoints.
-- Revisar request bodies de reglas, settings y acciones puntuales antes de generar cliente.
-- Exportar el contrato para que el frontend genere tipos si se desea.
+## Pendiente P1 - recomendado antes o durante frontend MVP
 
-### 6. Tests con PostgreSQL real
+### P1.1 OpenAPI listo para generacion de cliente
 
-Ya existe `npm run test:prisma` y se valido contra PostgreSQL de Docker. Falta ampliar cobertura:
+El contrato ya cubre endpoints principales. Falta:
+
+- Agregar ejemplos reales de payload a endpoints principales.
+- Revisar request bodies de reglas, settings y acciones puntuales.
+- Exportar o versionar archivo OpenAPI para el frontend.
+- Validar si el frontend generara tipos con OpenAPI.
+
+### P1.2 Tests con Prisma via HTTP
+
+Ya existe test de repositorios Prisma. Falta:
 
 - Automatizar creacion y limpieza de DB de test.
-- Agregar casos HTTP completos ejecutando `PERSISTENCE_DRIVER=prisma`.
+- Ejecutar casos HTTP completos con `PERSISTENCE_DRIVER=prisma`.
 - Probar desconexion Gmail eliminando tokens desde endpoint HTTP.
+- Probar migraciones desde DB vacia en CI con una base dedicada.
 
-### 7. Gmail sync mas completo
+### P1.3 Sync Gmail mas completo
 
-El sync actual cubre mensajes recientes e incremental con paginacion `nextPageToken` hasta el limite configurado. Falta:
+Ya hay sync reciente/incremental con paginacion. Falta:
 
-- Persistir cursor incremental con mas control.
-- Evitar duplicados de alertas derivadas.
+- Persistir cursor incremental con mas control operativo.
+- Evitar duplicados de alertas derivadas en escenarios de re-sync.
 - Permitir sync por rango de fechas.
 - Permitir sync inicial profundo por lotes.
+- Registrar correlation ID por sync.
 
-### 8. Clasificacion mas precisa
+### P1.4 Clasificacion mas precisa
 
 El clasificador actual es heuristico. Falta:
 
 - Separar reglas internas del clasificador base.
-- Guardar explicacion mas estructurada:
+- Guardar explicacion estructurada:
   - senales detectadas,
   - reglas aplicadas,
   - scores previos,
   - scores finales.
-- Permitir feedback de usuario para mejorar reglas futuras.
-- Definir si se usara IA despues y bajo que permisos.
+- Permitir feedback de usuario para mejorar reglas.
+- Decidir si se usara IA despues y bajo que permisos.
 
-### 9. Aplicacion real de reglas automaticas
+### P1.5 Reglas automaticas avanzadas
 
-El CRUD de reglas ya tiene motor inicial durante sync para correos nuevos: evalua condiciones, aplica categoria/importancia/revision/spam/etiqueta interna, registra `actionHistory`, incrementa `timesApplied` y genera alertas cuando la regla lo solicita. Falta ampliar:
+Ya existe motor inicial durante sync. Falta:
 
-- Aplicar etiqueta Gmail real con `users.messages.modify` si esta habilitado.
+- Aplicar etiqueta Gmail real con `users.messages.modify`.
 - Registrar auditoria agregada por regla aplicada.
-- Exponer reglas coincidentes como campo estructurado en detalle de correo, no solo en `actionHistory`.
-- Evitar re-aplicacion manual sobre correos existentes salvo que el usuario lo solicite.
+- Exponer reglas coincidentes como campo estructurado en detalle del correo.
+- Re-aplicar reglas manualmente sobre correos existentes si el usuario lo solicita.
 
-### 10. Adjuntos
+### P1.6 Adjuntos avanzados
 
-Actualmente se guarda metadata y el contenido se descarga bajo demanda desde Gmail. Ya existe:
+Ya existe descarga bajo demanda. Falta:
 
-- `GET /api/emails/:id/attachments/:attachmentId`
-- Descarga bajo demanda, nunca masiva por defecto.
-- Validacion de tamano maximo con `GMAIL_ATTACHMENT_MAX_BYTES`.
-- Bloqueo basico de MIME/extensiones ejecutables.
-- Sin almacenamiento del contenido completo en DB.
-
-Falta:
-
-- Escanear riesgo si aplica.
+- Escaneo de riesgo si aplica.
 - Ampliar allowlist/denylist de MIME segun politica final.
+- Decidir si algunos adjuntos pueden cachearse temporalmente.
+- Definir expiracion de descargas si se agregan URLs firmadas en el futuro.
 
-### 11. HTML de correos mas seguro
+### P1.7 HTML y links de correos
 
-Ya se sanitiza HTML y se guarda `bodyText` separado para busqueda/fallback. Falta reforzar:
+Ya se sanitiza HTML. Falta:
 
 - Validar enlaces externos.
 - Marcar dominios sospechosos.
 - Bloquear tracking pixels si se renderiza contenido remoto.
-- Reescribir links para abrir con advertencia si el risk score es alto.
+- Reescribir links para abrir con advertencia si risk score es alto.
 
-### 12. Busqueda avanzada
+### P1.8 Busqueda avanzada
 
-La busqueda actual funciona para MVP. Falta:
+La busqueda actual sirve para MVP. Falta:
 
 - Full-text search PostgreSQL.
-- Indices por subject/snippet/from/domain.
+- Indices por `subject`, `snippet`, `bodyText`, `fromEmail`, `fromDomain`.
 - Filtros combinados optimizados.
 - Ordenamiento por scores desde JSONB o columnas materializadas.
 - Paginacion estable por cursor para bandejas grandes.
 
-### 13. RBAC y colaboradores
+### P1.9 RBAC y colaboradores
 
-Actualmente el rol viene en usuario, pero falta modelo completo:
+Actualmente el usuario tiene rol, pero no existe modelo completo de membresias. Falta:
 
 - Invitar colaboradores al workspace.
 - Tabla de membresias si un usuario puede estar en varios workspaces.
@@ -176,39 +427,28 @@ Actualmente el rol viene en usuario, pero falta modelo completo:
   - conectar Gmail,
   - desconectar Gmail,
   - ver auditoria.
-- Endpoints de miembros:
+- Endpoints sugeridos:
   - `GET /api/workspaces/current/members`
   - `POST /api/workspaces/current/invitations`
   - `PATCH /api/workspaces/current/members/:id`
   - `DELETE /api/workspaces/current/members/:id`
 
-### 14. Gestion de perfil y password
+### P1.10 Password reset y sesiones
 
-Ya existen:
-
-- `PATCH /api/users/me`
-- `PATCH /api/auth/password`
-
-Falta:
+Ya existe cambio de password autenticado. Falta:
 
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
-- invalidacion de tokens tras cambio de password.
-
-### 15. Sesiones
-
-El JWT actual es stateless. Falta definir:
-
 - Tabla de sesiones.
 - Revocacion de sesion.
 - Logout real invalidando token.
-- Refresh tokens de sesion propia, no Gmail.
+- Refresh tokens propios de la app.
 - Lista de dispositivos activos.
-- Expiracion configurable.
+- Invalidar tokens tras cambio de password.
 
-### 16. Auditoria mas fuerte
+### P1.11 Auditoria fuerte
 
-La auditoria existe. Falta mejorar:
+La auditoria existe. Falta:
 
 - Guardar IP real considerando proxy.
 - Guardar user agent.
@@ -217,9 +457,9 @@ La auditoria existe. Falta mejorar:
 - Retencion automatica segun settings.
 - Endpoint de exportacion.
 
-### 17. Observabilidad
+### P1.12 Observabilidad
 
-Ya existe request ID, logger estructurado JSON y readiness check operativo. Falta:
+Ya existe request ID, logger JSON y readiness. Falta:
 
 - Correlation ID por sync.
 - Metricas:
@@ -228,35 +468,45 @@ Ya existe request ID, logger estructurado JSON y readiness check operativo. Falt
   - mensajes sincronizados,
   - fallos OAuth,
   - cuentas que requieren reconexion.
-- Exportar metricas para Prometheus/OpenTelemetry o proveedor equivalente.
+- Exportar metricas para Prometheus, OpenTelemetry o proveedor equivalente.
 
-### 18. Manejo centralizado de errores Gmail API
+### P1.13 Errores Gmail operativos
 
-Ya existe traduccion base para tokens revocados, rate limit, quota exceeded e historyId no recuperable. Falta completar comportamiento operativo:
+Ya existe traduccion base. Falta:
 
 - Backoff real por cuenta ante `rateLimitExceeded` y `userRateLimitExceeded`.
 - Politica de reintentos automatica.
 - Exponer `retryAfter` recomendado en logs de sync cuando aplique.
 
-## P2 - Mejoras importantes despues del front MVP
+### P1.14 Calidad y CI
 
-### 19. Gmail Pub/Sub Watch
+Ya existe workflow base. Falta:
+
+- Linter.
+- Formatter.
+- Escaneo de dependencias.
+- Validacion de migraciones mas estricta.
+- Revisar advertencia Prisma: `package.json#prisma` sera removido en Prisma 7; migrar a `prisma.config.ts` antes de subir a Prisma 7.
+
+## Pendiente P2 - despues del frontend MVP
+
+### P2.1 Gmail Pub/Sub Watch
 
 Para tiempo real real:
 
 - Configurar Google Cloud Pub/Sub.
 - Crear topic y subscription.
 - Implementar endpoint webhook.
-- Verificar mensajes de Pub/Sub.
+- Verificar mensajes Pub/Sub.
 - Guardar `watchExpiration`.
 - Renovar watch antes de expirar.
 - Usar Gmail history API desde `historyId`.
 
-### 20. Cola de trabajos
+### P2.2 Cola de trabajos
 
 La sincronizacion deberia salir del request HTTP:
 
-- BullMQ, Cloud Tasks, RabbitMQ o equivalente.
+- Evaluar BullMQ, Cloud Tasks, RabbitMQ o equivalente.
 - Jobs:
   - sync inicial,
   - sync incremental,
@@ -266,17 +516,17 @@ La sincronizacion deberia salir del request HTTP:
 - Reintentos con backoff.
 - Idempotencia por job.
 
-### 21. Notificaciones
+### P2.3 Notificaciones
 
 Definir:
 
 - Email interno.
 - Web push.
-- SSE/WebSocket para front.
+- SSE o WebSocket para frontend.
 - Notificaciones por alerta critica.
 - Preferencias por usuario/workspace.
 
-### 22. Exportacion de datos
+### P2.4 Exportacion de datos
 
 Endpoints posibles:
 
@@ -293,7 +543,7 @@ Considerar:
 - permisos,
 - auditoria.
 
-### 23. Eliminacion y retencion de datos
+### P2.5 Eliminacion y retencion
 
 Falta:
 
@@ -303,7 +553,9 @@ Falta:
 - Borrado de workspace.
 - Borrado de cuenta de usuario.
 
-### 24. Seguridad avanzada
+### P2.6 Seguridad avanzada
+
+Falta:
 
 - MFA.
 - Deteccion de login sospechoso.
@@ -313,7 +565,7 @@ Falta:
 - CSRF si se usan cookies.
 - CSP para frontend futuro.
 
-### 25. Versionado de API
+### P2.7 Versionado de API
 
 Antes de produccion publica:
 
@@ -322,39 +574,46 @@ Antes de produccion publica:
 - Politica de deprecacion.
 - Compatibilidad frontend/back.
 
-### 26. Docker y despliegue
+### P2.8 Despliegue productivo final
 
-Base creada con Dockerfile, Docker Compose, healthcheck container, variables de entorno y guia de deploy. Falta:
+Base Docker ya existe. Falta:
 
-- Separar compose local/staging de una configuracion productiva real.
-- Definir proveedor de despliegue final.
+- Separar compose local/staging de configuracion productiva real.
+- Definir proveedor final.
 - Automatizar migraciones en pipeline de release.
+- Definir backups administrados segun proveedor.
 
-### 27. Calidad y CI
+## Criterio para declarar backend v1 listo
 
-Ya existe GitHub Actions para `npm run check`, migraciones, seed y `npm run test:prisma` con PostgreSQL. Falta:
+Minimo para empezar frontend MVP:
 
-- Linter.
-- Formatter.
-- Escaneo de dependencias.
-- Validacion de migraciones.
+- `npm run check` pasando.
+- `npm run test:prisma` pasando contra PostgreSQL real.
+- OpenAPI usable por frontend.
+- Endpoints principales estables:
+  - auth,
+  - users,
+  - workspace,
+  - gmail accounts,
+  - emails,
+  - attachments,
+  - alerts,
+  - senders,
+  - rules,
+  - analytics,
+  - audit,
+  - settings.
+- Documentacion de ejecucion actualizada.
 
-### 28. Documentacion operativa avanzada
+Minimo para produccion real:
 
-Ya existen guias de Google OAuth, runbook de errores Gmail y rotacion de secretos. Falta:
-
-- Contrato OpenAPI completo.
-
-## Criterio sugerido para declarar backend v1 listo
-
-- PostgreSQL validado end-to-end.
-- OAuth Gmail real probado con al menos dos cuentas.
-- Sync manual e incremental probado.
-- Correos persisten tras reinicio.
+- Gmail real probado con al menos dos cuentas.
+- Sync manual e incremental probado con Gmail real.
+- Correos persisten tras reinicio en Prisma.
 - Tokens no aparecen en responses ni logs.
-- OpenAPI completo con schemas.
-- Settings integrado con frontend.
-- Tests memory y Prisma pasando.
+- Reconexion real probada.
 - Rate limiting activo.
 - Logs de sync disponibles.
-- Documentacion de ejecucion completa.
+- Backups y restore definidos.
+- Secretos fuertes configurados.
+- Plan de rotacion de tokens implementado o aceptado operacionalmente.
