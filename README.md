@@ -79,6 +79,7 @@ npm run db:generate  # genera Prisma Client
 npm run db:migrate   # aplica migraciones en desarrollo
 npm run db:deploy    # aplica migraciones en produccion
 npm run db:seed      # crea usuario demo en PostgreSQL
+npm run tokens:reencrypt # re-cifra tokens Gmail al rotar TOKEN_ENCRYPTION_KEY
 ```
 
 ## Usuario demo
@@ -181,6 +182,8 @@ Mas detalle en [docs/api.md](docs/api.md).
 - La API no acepta ni solicita contrasenas Gmail.
 - Los tokens Gmail se cifran en backend y no se devuelven al frontend.
 - Las rutas privadas usan JWT Bearer.
+- Logout revoca la sesion activa en backend; un JWT revocado deja de ser valido.
+- El `state` OAuth Gmail se firma, expira y se consume una sola vez.
 - Los cuerpos HTML de correos se sanitizan antes de responder.
 - Acciones sensibles quedan registradas en auditoria.
 - PostgreSQL/Prisma persiste usuarios, workspaces, tokens cifrados, correos, alertas, reglas, remitentes, settings y auditoria.

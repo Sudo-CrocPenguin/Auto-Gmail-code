@@ -25,7 +25,7 @@ GOOGLE_OAUTH_REDIRECT_URI=https://<api-host>/api/gmail/oauth/callback
 GMAIL_ATTACHMENT_MAX_BYTES=5242880
 ```
 
-El backend no arranca en `production` si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` usan valores por defecto, si falta `DATABASE_URL` o si `PERSISTENCE_DRIVER` no es `prisma`.
+El backend no arranca en `production` si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` son placeholders o tienen menos de 32 caracteres, si falta `DATABASE_URL`, si `PERSISTENCE_DRIVER` no es `prisma` o si faltan `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`.
 
 ## Despliegue con Docker Compose
 
@@ -34,6 +34,8 @@ Para desarrollo o staging local con PostgreSQL:
 ```bash
 docker compose up --build
 ```
+
+El Compose usa `NODE_ENV=development` por defecto para poder levantar entorno local sin credenciales Google. Para produccion, define `NODE_ENV=production` y todos los secretos en el ambiente antes de arrancar.
 
 Aplicar migraciones:
 
@@ -145,7 +147,16 @@ Frecuencia recomendada para primera version:
 
 ## Rotacion de secretos
 
-`JWT_SECRET` puede rotarse invalidando sesiones activas. `TOKEN_ENCRYPTION_KEY` requiere estrategia de re-cifrado porque protege tokens OAuth Gmail persistidos. No cambiar `TOKEN_ENCRYPTION_KEY` en produccion sin migrar o volver a conectar cuentas Gmail.
+`JWT_SECRET` puede rotarse invalidando sesiones activas. `TOKEN_ENCRYPTION_KEY` protege tokens OAuth Gmail persistidos y debe rotarse con:
+
+```bash
+OLD_TOKEN_ENCRYPTION_KEY=<clave-anterior> \
+TOKEN_ENCRYPTION_KEY=<clave-nueva> \
+DATABASE_URL=<postgres-url> \
+npm run tokens:reencrypt
+```
+
+No cambiar `TOKEN_ENCRYPTION_KEY` en produccion sin backup y re-cifrado previo.
 
 ## Healthcheck
 

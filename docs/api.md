@@ -51,7 +51,7 @@ Devuelve usuario y workspace autenticados.
 
 ### POST /api/auth/logout
 
-Registra auditoria de cierre de sesion.
+Revoca la sesion activa, invalida el JWT asociado y registra auditoria de cierre de sesion.
 
 ## Workspace
 
@@ -83,16 +83,18 @@ Callback configurado para Google OAuth. Recibe `code`, `state` o `error`, regist
 
 Cuando Google OAuth esta configurado, este endpoint:
 
-1. Intercambia `code` por credenciales OAuth.
-2. Obtiene el perfil Gmail autorizado.
-3. Crea o actualiza la cuenta Gmail del workspace.
-4. Guarda tokens cifrados en backend.
-5. Sincroniza mensajes recientes con Gmail API.
-6. Redirige al frontend con `gmailAccountId`, `email` y `synced`.
+1. Verifica `state` firmado.
+2. Consume `state` una sola vez contra `gmail_oauth_states`.
+3. Intercambia `code` por credenciales OAuth.
+4. Obtiene el perfil Gmail autorizado.
+5. Crea o actualiza la cuenta Gmail del workspace.
+6. Guarda tokens cifrados en backend.
+7. Sincroniza mensajes recientes con Gmail API.
+8. Redirige al frontend con `gmailAccountId`, `email` y `synced`.
 
 ### POST /api/gmail/accounts/:id/sync
 
-Solicita sincronizacion manual. Si la cuenta tiene credenciales OAuth guardadas, usa Gmail API real. Si la cuenta pertenece a los datos demo y no tiene tokens, ejecuta el comportamiento demo.
+Solicita sincronizacion manual. Si la cuenta tiene credenciales OAuth guardadas, usa Gmail API real. En `PERSISTENCE_DRIVER=prisma`, una cuenta sin credenciales devuelve `GMAIL_RECONNECT_REQUIRED`; el comportamiento demo solo existe en modo memoria.
 
 ### GET /api/gmail/accounts/:id/sync-logs
 

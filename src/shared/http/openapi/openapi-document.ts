@@ -420,7 +420,7 @@ export const openApiDocument = {
                   email: { type: "string", format: "email" },
                   password: { type: "string", minLength: 8 },
                   workspaceName: { type: "string" },
-                  acceptTerms: { type: "boolean" },
+                  acceptTerms: { type: "boolean", enum: [true] },
                 },
               },
             },
@@ -464,7 +464,7 @@ export const openApiDocument = {
       post: {
         summary: "Cerrar sesion",
         responses: {
-          "200": { description: "Sesion cerrada", content: { "application/json": { schema: { type: "object", properties: { success: { type: "boolean" } } } } } },
+          "200": { description: "Sesion revocada", content: { "application/json": { schema: { type: "object", properties: { success: { type: "boolean" } } } } } },
           "401": unauthorizedResponse,
         },
       },

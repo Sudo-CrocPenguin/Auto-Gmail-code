@@ -26,27 +26,27 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
-      PORT: 4000
-      API_PREFIX: /api
-      FRONTEND_URL: http://localhost:3000
-      PERSISTENCE_DRIVER: prisma
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/auto_gmail_code?schema=public
-      JWT_SECRET: replace-with-a-strong-production-secret
-      JWT_EXPIRES_IN: 1d
-      TOKEN_ENCRYPTION_KEY: replace-with-a-strong-token-encryption-key
-      RATE_LIMIT_AUTH_WINDOW_MS: 900000
-      RATE_LIMIT_AUTH_MAX: 10
-      RATE_LIMIT_GMAIL_WINDOW_MS: 60000
-      RATE_LIMIT_GMAIL_MAX: 120
-      RATE_LIMIT_SYNC_WINDOW_MS: 300000
-      RATE_LIMIT_SYNC_MAX: 5
-      GOOGLE_CLIENT_ID: ""
-      GOOGLE_CLIENT_SECRET: ""
-      GOOGLE_OAUTH_REDIRECT_URI: http://localhost:4000/api/gmail/oauth/callback
-      GOOGLE_OAUTH_SCOPES: https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify
-      GMAIL_SYNC_MAX_MESSAGES: 25
-      GMAIL_ATTACHMENT_MAX_BYTES: 5242880
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-4000}
+      API_PREFIX: ${API_PREFIX:-/api}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      PERSISTENCE_DRIVER: ${PERSISTENCE_DRIVER:-prisma}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/auto_gmail_code?schema=public}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-strong-production-secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-replace-with-a-strong-token-encryption-key}
+      RATE_LIMIT_AUTH_WINDOW_MS: ${RATE_LIMIT_AUTH_WINDOW_MS:-900000}
+      RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-10}
+      RATE_LIMIT_GMAIL_WINDOW_MS: ${RATE_LIMIT_GMAIL_WINDOW_MS:-60000}
+      RATE_LIMIT_GMAIL_MAX: ${RATE_LIMIT_GMAIL_MAX:-120}
+      RATE_LIMIT_SYNC_WINDOW_MS: ${RATE_LIMIT_SYNC_WINDOW_MS:-300000}
+      RATE_LIMIT_SYNC_MAX: ${RATE_LIMIT_SYNC_MAX:-5}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_OAUTH_REDIRECT_URI: ${GOOGLE_OAUTH_REDIRECT_URI:-http://localhost:4000/api/gmail/oauth/callback}
+      GOOGLE_OAUTH_SCOPES: ${GOOGLE_OAUTH_SCOPES:-https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify}
+      GMAIL_SYNC_MAX_MESSAGES: ${GMAIL_SYNC_MAX_MESSAGES:-25}
+      GMAIL_ATTACHMENT_MAX_BYTES: ${GMAIL_ATTACHMENT_MAX_BYTES:-5242880}
     ports:
       - "4000:4000"
     healthcheck:
