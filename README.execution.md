@@ -41,7 +41,7 @@ Variables actuales:
 NODE_ENV=development
 PORT=4000
 API_PREFIX=/api
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 PERSISTENCE_DRIVER=memory
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public
 JWT_SECRET=change-me-in-local-env

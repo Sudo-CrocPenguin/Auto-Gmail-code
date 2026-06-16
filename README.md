@@ -152,7 +152,7 @@ Ejemplo base:
 NODE_ENV=development
 PORT=4000
 API_PREFIX=/api
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 PERSISTENCE_DRIVER=memory
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public
 JWT_SECRET=change-me-in-local-env
@@ -261,7 +261,7 @@ Arranca backend con Prisma:
 env NODE_ENV=development \
   PORT=4000 \
   API_PREFIX=/api \
-  FRONTEND_URL=http://localhost:3000 \
+  FRONTEND_URL=http://localhost:5173 \
   PERSISTENCE_DRIVER=prisma \
   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public \
   JWT_SECRET=local-development-jwt-secret-with-enough-length \
@@ -318,7 +318,7 @@ http://localhost:4001/api/gmail/oauth/callback
 env NODE_ENV=development \
   PORT=4001 \
   API_PREFIX=/api \
-  FRONTEND_URL=http://localhost:3000 \
+  FRONTEND_URL=http://localhost:5173 \
   PERSISTENCE_DRIVER=prisma \
   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public \
   JWT_SECRET=local-development-jwt-secret-with-enough-length \

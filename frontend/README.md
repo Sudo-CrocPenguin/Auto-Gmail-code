@@ -36,6 +36,12 @@ Base API por defecto:
 http://localhost:4000/api
 ```
 
+El backend debe permitir el origen del front con:
+
+```txt
+FRONTEND_URL=http://localhost:5173
+```
+
 Puedes cambiarla con:
 
 ```txt
