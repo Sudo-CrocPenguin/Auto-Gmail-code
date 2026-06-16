@@ -29,11 +29,14 @@ https://<api-host>/api/gmail/oauth/callback
 6. Configurar variables:
 
 ```txt
+FRONTEND_URL=http://localhost:5173
 GOOGLE_CLIENT_ID=<oauth-client-id>
 GOOGLE_CLIENT_SECRET=<oauth-client-secret>
-GOOGLE_OAUTH_REDIRECT_URI=https://<api-host>/api/gmail/oauth/callback
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:4000/api/gmail/oauth/callback
 GOOGLE_OAUTH_SCOPES=https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify
 ```
+
+En staging o produccion, `FRONTEND_URL` y `GOOGLE_OAUTH_REDIRECT_URI` deben usar los dominios reales y HTTPS.
 
 7. Ejecutar:
 
@@ -43,7 +46,13 @@ POST /api/gmail/oauth/start
 
 8. Abrir `data.authUrl`, aceptar permisos y volver al callback.
 
-9. Validar en API:
+9. El backend redirige al frontend:
+
+```txt
+http://localhost:5173/gmail-accounts?oauth=success&gmailAccountId=<id>&email=<gmail>&synced=<n>
+```
+
+10. Validar en API:
 
 ```txt
 GET /api/gmail/accounts
@@ -58,3 +67,13 @@ POST /api/gmail/accounts/:id/sync
 - `/api/emails` muestra mensajes reales.
 - `/api/gmail/accounts/:id/sync-logs` registra el resultado.
 - Al reiniciar el backend con Prisma, la cuenta y los correos persisten.
+
+## Registro Desde El Frontend
+
+1. Abrir `http://localhost:5173`.
+2. Seleccionar `Crear cuenta`.
+3. Crear usuario propietario y workspace.
+4. Entrar al modulo Gmail que se abre despues del registro.
+5. Usar `Registrar Gmail`.
+
+Si el backend responde `configured: false`, no hay OAuth real configurado. En ese caso faltan `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`, o el redirect URI no coincide con el registrado en Google Cloud.

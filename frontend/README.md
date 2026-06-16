@@ -11,6 +11,7 @@ El estilo visual usa una direccion cyberpunk, Tron y gamer: fondo oscuro, grilla
 Sirve para validar y operar desde navegador las capacidades ya disponibles en el backend:
 
 - Autenticacion con JWT propio del backend.
+- Registro de usuario propietario y workspace desde `POST /api/auth/register`.
 - Carga de resumen analytics del workspace.
 - Consulta de cuentas Gmail conectadas.
 - Inicio de OAuth Gmail desde `POST /api/gmail/oauth/start`.
@@ -25,16 +26,17 @@ Sirve para validar y operar desde navegador las capacidades ya disponibles en el
 
 El frontend no contiene reglas de negocio del backend. La UI llama casos de uso del lado cliente, esos casos usan repositorios HTTP y los repositorios consumen endpoints REST.
 
-Flujo principal:
+Flujo principal de autenticacion:
 
-1. El usuario entra con email y password.
-2. `LoginUserUseCase` llama `POST /api/auth/login`.
-3. El token se guarda en `localStorage` con `BrowserTokenStorage`.
-4. `HttpClient` agrega `Authorization: Bearer <token>` en rutas privadas.
-5. `WorkspaceOverviewService` carga en paralelo analytics, Gmail, emails, alertas, reglas y settings.
-6. Los repositorios normalizan respuestas del backend cuando la API entrega objetos anidados, por ejemplo `classification` en correos.
-7. Los paneles renderizan datos ya normalizados por modulo.
-8. Las acciones operativas vuelven a pasar por `App`, ejecutan el repositorio correspondiente y refrescan el overview.
+1. El usuario puede crear cuenta con nombre, email, password, workspace y aceptacion de terminos.
+2. `RegisterUserUseCase` llama `POST /api/auth/register` y recibe `accessToken`.
+3. El usuario tambien puede entrar con `LoginUserUseCase`, que llama `POST /api/auth/login`.
+4. El token se guarda en `localStorage` con `BrowserTokenStorage`.
+5. `HttpClient` agrega `Authorization: Bearer <token>` en rutas privadas.
+6. `WorkspaceOverviewService` carga en paralelo analytics, Gmail, emails, alertas, reglas y settings.
+7. Los repositorios normalizan respuestas del backend cuando la API entrega objetos anidados, por ejemplo `classification` en correos o `emailAddress` en cuentas Gmail.
+8. Los paneles renderizan datos ya normalizados por modulo.
+9. Las acciones operativas vuelven a pasar por `App`, ejecutan el repositorio correspondiente y refrescan el overview.
 
 Base API por defecto:
 
@@ -86,6 +88,16 @@ Cada feature separa:
 
 ## Flujos operativos actuales
 
+### Registro y cuenta propia
+
+El formulario inicial tiene modo `Entrar` y `Crear cuenta`. En `Crear cuenta`, el frontend envia `name`, `email`, `password`, `workspaceName` y `acceptTerms` a `POST /api/auth/register`. Si el backend responde correctamente, la sesion queda activa, el JWT se guarda localmente y la consola abre el modulo Gmail para registrar cuentas.
+
+### Gmail real
+
+El modulo `gmail` llama `POST /api/gmail/oauth/start`. Si el backend tiene `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`, abre la URL real de Google. Google vuelve al backend en `/api/gmail/oauth/callback` y el backend redirige al frontend con `/gmail-accounts?oauth=success&email=...&synced=...`.
+
+Si faltan credenciales Google, el frontend no abre el flujo demo: muestra un aviso para evitar confundir datos reales con simulacion.
+
 ### Inbox
 
 El modulo `emails` permite buscar por texto, filtrar por categoria, riesgo minimo, no leidos, importantes o accion requerida. Al seleccionar un correo, el frontend llama `GET /api/emails/:id` y muestra remitente, cuenta, destinatarios, cuerpo de texto, adjuntos y scores de clasificacion. Las acciones `POST /api/emails/:id/mark-reviewed` y `POST /api/emails/:id/mark-important` actualizan el backend y luego refrescan la consola.
@@ -127,7 +139,7 @@ URL habitual:
 http://localhost:5173
 ```
 
-Usuario demo si el backend esta en memoria:
+Puedes crear una cuenta real desde la pantalla inicial. Si quieres usar el seed local en memoria, el usuario demo es:
 
 ```txt
 email: owner@autogmail.local
@@ -147,6 +159,7 @@ npm run preview  # previsualiza dist/
 
 El frontend consume estos endpoints:
 
+- `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `POST /api/auth/logout`
