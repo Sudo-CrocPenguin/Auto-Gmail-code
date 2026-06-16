@@ -13,16 +13,34 @@ interface GmailPanelProps {
 }
 
 export function GmailPanel({ accounts, oauthNotice, onStartOAuth, onSyncAccount }: GmailPanelProps) {
+  const connectedAccounts = accounts.filter((account) => account.status === "CONNECTED").length;
+  const totalMessages = accounts.reduce((total, account) => total + (account.totalMessages ?? 0), 0);
+
   return (
     <SectionPanel
       action={
         <NeonButton icon={<SatelliteDish size={18} />} onClick={onStartOAuth}>
-          Registrar Gmail
+          {accounts.length ? "Registrar otro Gmail" : "Registrar primer Gmail"}
         </NeonButton>
       }
       eyebrow="OAuth"
-      title="Cuentas Gmail"
+      title="Gmails registrados en tu usuario"
     >
+      <div className="gmail-summary">
+        <article>
+          <strong>{accounts.length}</strong>
+          <span>cuentas Gmail</span>
+        </article>
+        <article>
+          <strong>{connectedAccounts}</strong>
+          <span>conectadas</span>
+        </article>
+        <article>
+          <strong>{totalMessages}</strong>
+          <span>correos indexados</span>
+        </article>
+      </div>
+
       {oauthNotice ? (
         <div className={`oauth-notice oauth-notice--${oauthNotice.status}`}>
           <strong>{oauthNotice.message}</strong>
@@ -38,7 +56,9 @@ export function GmailPanel({ accounts, oauthNotice, onStartOAuth, onSyncAccount 
               <div>
                 <strong>{account.email}</strong>
                 <span>
-                  {account.errorMessage ?? account.displayName ?? `${account.totalMessages ?? 0} mensajes indexados`}
+                  {account.errorMessage ??
+                    account.displayName ??
+                    `${account.totalMessages ?? 0} mensajes indexados en este Gmail`}
                 </span>
               </div>
               <StatusPill
@@ -54,7 +74,10 @@ export function GmailPanel({ accounts, oauthNotice, onStartOAuth, onSyncAccount 
             </article>
           ))
         ) : (
-          <p className="empty-state">No hay cuentas Gmail conectadas.</p>
+          <p className="empty-state">
+            Tu usuario aun no tiene Gmail registrados. Usa el boton para conectar una cuenta; puedes repetirlo con
+            todas las cuentas Gmail que necesites.
+          </p>
         )}
       </div>
     </SectionPanel>

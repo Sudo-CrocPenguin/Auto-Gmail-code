@@ -125,6 +125,7 @@ export function CommandCenter({
         ) : null}
         {activeModule === "emails" ? (
           <InboxPanel
+            accounts={overview.accounts}
             emails={overview.emails}
             isLoading={isLoading}
             selectedEmail={selectedEmail}

@@ -58,6 +58,7 @@ export class EmailApiRepository implements EmailRepository {
       limit: query.limit ?? 12,
       search: query.search,
       category: query.category,
+      gmailAccountId: query.gmailAccountId,
       isImportant: query.isImportant,
       isSpam: query.isSpam,
       actionRequired: query.actionRequired,

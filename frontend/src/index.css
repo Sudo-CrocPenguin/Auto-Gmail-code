@@ -582,6 +582,33 @@ select:focus,
   border-color: rgba(255, 209, 102, 0.55);
 }
 
+.gmail-summary {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gmail-summary article {
+  background: rgba(51, 247, 255, 0.06);
+  border: 1px solid rgba(51, 247, 255, 0.18);
+  display: grid;
+  gap: 0.2rem;
+  min-height: 4.6rem;
+  padding: 0.8rem;
+}
+
+.gmail-summary strong {
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+}
+
+.gmail-summary span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
 .inbox-layout,
 .rules-layout {
   align-items: start;
@@ -834,6 +861,40 @@ select:focus,
   gap: 0.55rem;
 }
 
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.history-list {
+  border-top: 1px solid rgba(126, 164, 183, 0.18);
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.8rem;
+}
+
+.history-list > strong {
+  color: #ffffff;
+}
+
+.history-list div {
+  background: rgba(4, 8, 18, 0.66);
+  border: 1px solid rgba(126, 164, 183, 0.16);
+  padding: 0.65rem;
+}
+
+.history-list span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.history-list p {
+  color: var(--text);
+  margin-top: 0.2rem;
+}
+
 .attachment-list span,
 .external-link {
   align-items: center;
@@ -930,6 +991,7 @@ select:focus,
   .inbox-filters,
   .rule-editor,
   .score-grid,
+  .gmail-summary,
   .detail-list {
     grid-template-columns: 1fr;
   }

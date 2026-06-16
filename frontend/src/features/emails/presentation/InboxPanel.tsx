@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import type { GmailAccount } from "../../gmail/domain/gmail-account.entity";
 import { NeonButton } from "../../../shared/presentation/components/neon-button";
 import { SectionPanel } from "../../../shared/presentation/components/section-panel";
 import { StatusPill } from "../../../shared/presentation/components/status-pill";
@@ -16,6 +17,7 @@ import { emailCategories, type EmailCategory } from "../domain/email-category";
 import type { EmailDetail, EmailListQuery, EmailSummary } from "../domain/email-message.entity";
 
 interface InboxPanelProps {
+  accounts: GmailAccount[];
   emails: EmailSummary[];
   isLoading: boolean;
   selectedEmail: EmailDetail | null;
@@ -28,6 +30,7 @@ interface InboxPanelProps {
 interface InboxFilters {
   actionRequiredOnly: boolean;
   category: EmailCategory | "";
+  gmailAccountId: string;
   importantOnly: boolean;
   minRiskScore: number;
   search: string;
@@ -39,6 +42,7 @@ interface InboxFilters {
 const defaultFilters: InboxFilters = {
   actionRequiredOnly: false,
   category: "",
+  gmailAccountId: "",
   importantOnly: false,
   minRiskScore: 0,
   search: "",
@@ -48,6 +52,7 @@ const defaultFilters: InboxFilters = {
 };
 
 export function InboxPanel({
+  accounts,
   emails,
   isLoading,
   selectedEmail,
@@ -85,6 +90,26 @@ export function InboxPanel({
                 onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
               />
             </div>
+          </label>
+
+          <label>
+            <span>Cuenta Gmail</span>
+            <select
+              value={filters.gmailAccountId}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  gmailAccountId: event.target.value,
+                }))
+              }
+            >
+              <option value="">Todas tus cuentas</option>
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.email}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -280,6 +305,20 @@ function EmailDetailPanel({ email, isLoading, onMarkImportant, onMarkReviewed }:
             <p>{email.bodyText ?? email.snippet ?? "Este correo no tiene cuerpo de texto sincronizado."}</p>
           </div>
 
+          <div className="detail-tags">
+            <StatusPill label={email.isRead ? "Leido" : "No leido"} tone={email.isRead ? "green" : "amber"} />
+            <StatusPill
+              label={email.actionRequired ? "Requiere accion" : "Sin accion"}
+              tone={email.actionRequired ? "red" : "cyan"}
+            />
+            {email.secondaryCategories.map((category) => (
+              <StatusPill key={category} label={category} tone="cyan" />
+            ))}
+            {email.labelIds.map((label) => (
+              <StatusPill key={label} label={label} tone="magenta" />
+            ))}
+          </div>
+
           <dl className="detail-list">
             <div>
               <dt>Cuenta</dt>
@@ -297,6 +336,14 @@ function EmailDetailPanel({ email, isLoading, onMarkImportant, onMarkReviewed }:
               <dt>Destinatarios</dt>
               <dd>{email.toEmails.join(", ") || "sin destinatarios"}</dd>
             </div>
+            <div>
+              <dt>Adjuntos</dt>
+              <dd>{email.attachments.length}</dd>
+            </div>
+            <div>
+              <dt>Revisado</dt>
+              <dd>{email.reviewedAt ? formatDateTime(email.reviewedAt) : "pendiente"}</dd>
+            </div>
           </dl>
 
           {email.attachments.length ? (
@@ -312,6 +359,20 @@ function EmailDetailPanel({ email, isLoading, onMarkImportant, onMarkReviewed }:
 
           {email.classification?.explanation ? (
             <p className="classification-note">{email.classification.explanation}</p>
+          ) : null}
+
+          {email.actionHistory.length ? (
+            <div className="history-list">
+              <strong>Historial</strong>
+              {email.actionHistory.map((entry) => (
+                <div key={entry.id}>
+                  <span>{formatDateTime(entry.createdAt)}</span>
+                  <p>
+                    {entry.actor} - {entry.description || entry.action}
+                  </p>
+                </div>
+              ))}
+            </div>
           ) : null}
 
           {email.gmailUrl ? (
@@ -345,9 +406,10 @@ function Score({ label, value }: ScoreProps) {
 function toEmailQuery(filters: InboxFilters): EmailListQuery {
   return {
     page: 1,
-    limit: 12,
+    limit: 25,
     search: filters.search.trim() || undefined,
     category: filters.category || undefined,
+    gmailAccountId: filters.gmailAccountId || undefined,
     isImportant: filters.importantOnly ? true : undefined,
     isRead: filters.unreadOnly ? false : undefined,
     actionRequired: filters.actionRequiredOnly ? true : undefined,

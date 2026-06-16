@@ -71,6 +71,7 @@ export interface EmailListQuery {
   limit?: number;
   search?: string;
   category?: EmailCategory;
+  gmailAccountId?: string;
   isImportant?: boolean;
   isSpam?: boolean;
   actionRequired?: boolean;
