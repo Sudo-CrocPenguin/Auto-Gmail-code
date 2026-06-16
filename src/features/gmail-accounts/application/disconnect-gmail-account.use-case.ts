@@ -7,12 +7,16 @@ import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
 import { GmailTokenVault } from "../infrastructure/gmail-token-vault";
+import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
+
+type RevocationStatus = "revoked" | "skipped" | "failed";
 
 export class DisconnectGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly tokenVault: GmailTokenVault,
+    private readonly gmailClient: GoogleGmailClient,
   ) {}
 
   public async execute(context: AuthenticatedContext, accountId: string): Promise<GmailAccount> {
@@ -23,6 +27,7 @@ export class DisconnectGmailAccountUseCase {
       throw new NotFoundError("La cuenta Gmail no existe.", "GMAIL_ACCOUNT_NOT_FOUND");
     }
 
+    const revocation = await this.revokeRemoteCredentials(account.id);
     const updatedAccount = await this.gmailAccounts.update(account.id, {
       status: "DISCONNECTED",
       watchExpiration: null,
@@ -39,7 +44,11 @@ export class DisconnectGmailAccountUseCase {
       entityId: account.id,
       description: `Cuenta ${account.emailAddress} desconectada.`,
       ip: null,
-      metadata: { previousStatus: account.status },
+      metadata: {
+        previousStatus: account.status,
+        tokenRevocationStatus: revocation.status,
+        tokenRevocationError: revocation.errorMessage,
+      },
       createdAt: new Date().toISOString(),
     });
 
@@ -48,5 +57,26 @@ export class DisconnectGmailAccountUseCase {
     }
 
     return updatedAccount;
+  }
+
+  private async revokeRemoteCredentials(
+    gmailAccountId: string,
+  ): Promise<{ status: RevocationStatus; errorMessage: string | null }> {
+    const credentials = await this.tokenVault.getCredentials(gmailAccountId);
+    if (!credentials?.refresh_token && !credentials?.access_token) {
+      return { status: "skipped", errorMessage: null };
+    }
+
+    try {
+      return {
+        status: await this.gmailClient.revokeCredentials(credentials),
+        errorMessage: null,
+      };
+    } catch (error) {
+      return {
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "No fue posible revocar token OAuth en Google.",
+      };
+    }
   }
 }

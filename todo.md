@@ -25,6 +25,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Sync Gmail usa `nextPageToken` en mensajes recientes e historial incremental.
 - Motor inicial de reglas automaticas durante Gmail Sync para correos nuevos.
 - Perfil de usuario y cambio de password autenticado.
+- Desconexion Gmail intenta revocar token OAuth remoto y registra resultado.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -300,7 +301,6 @@ Falta:
 - Mantener metadata sin cuerpo.
 - Borrado de workspace.
 - Borrado de cuenta de usuario.
-- Revocacion OAuth al desconectar Gmail.
 
 ### 24. Seguridad avanzada
 

@@ -46,6 +46,16 @@ export class GoogleGmailClient {
     return tokens;
   }
 
+  public async revokeCredentials(credentials: Credentials): Promise<"revoked" | "skipped"> {
+    const token = credentials.refresh_token ?? credentials.access_token;
+    if (!token) {
+      return "skipped";
+    }
+
+    await this.createOAuthClient().revokeToken(token);
+    return "revoked";
+  }
+
   public async getProfile(credentials: Credentials): Promise<GmailProfile> {
     const gmail = this.createGmailClient(credentials);
     const response = await gmail.users.getProfile({ userId: "me" });

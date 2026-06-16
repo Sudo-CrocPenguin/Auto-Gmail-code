@@ -299,7 +299,12 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
       dependencies.googleGmailClient,
       dependencies.oauthStateService,
     ),
-    new DisconnectGmailAccountUseCase(dependencies.gmailAccounts, dependencies.auditLogs, dependencies.gmailTokenVault),
+    new DisconnectGmailAccountUseCase(
+      dependencies.gmailAccounts,
+      dependencies.auditLogs,
+      dependencies.gmailTokenVault,
+      dependencies.googleGmailClient,
+    ),
     new ListGmailSyncLogsUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
     new GetGmailSyncLogDetailUseCase(dependencies.gmailAccounts, dependencies.gmailSyncLogs),
   );

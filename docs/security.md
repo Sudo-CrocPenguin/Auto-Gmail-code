@@ -18,6 +18,7 @@ El backend evita exponer credenciales o datos sensibles de Gmail al frontend. Gm
 - Los datos se filtran por `workspaceId` para evitar acceso cruzado entre workspaces.
 - `state` OAuth de Gmail esta firmado con JWT, tiene audience/issuer dedicados y expira en 10 minutos.
 - Con PostgreSQL activo, tokens Gmail cifrados se persisten en `gmail_oauth_tokens`.
+- Al desconectar una cuenta Gmail, el backend intenta revocar el token OAuth en Google, registra el resultado en auditoria y elimina credenciales locales aunque la revocacion remota falle.
 - En `production`, el backend bloquea el arranque si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` usan valores por defecto, si falta `DATABASE_URL` o si `PERSISTENCE_DRIVER` no es `prisma`.
 
 ## OAuth Gmail
