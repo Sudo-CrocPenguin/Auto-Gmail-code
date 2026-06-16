@@ -1,4 +1,4 @@
-import { Database, Languages, MoonStar } from "lucide-react";
+import { BellRing, BrainCircuit, Database, HardDrive, Languages, MoonStar } from "lucide-react";
 
 import { SectionPanel } from "../../../shared/presentation/components/section-panel";
 import { StatusPill } from "../../../shared/presentation/components/status-pill";
@@ -10,6 +10,10 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ apiBaseUrl, settings }: SettingsPanelProps) {
+  const notifications = settings?.notifications;
+  const classification = settings?.classification;
+  const retention = settings?.retention;
+
   return (
     <SectionPanel eyebrow="Sistema" title="Configuracion del workspace">
       <div className="settings-grid">
@@ -28,7 +32,43 @@ export function SettingsPanel({ apiBaseUrl, settings }: SettingsPanelProps) {
           <strong>API</strong>
           <span>{apiBaseUrl}</span>
         </article>
+        <article>
+          <BellRing size={24} />
+          <strong>Notificaciones</strong>
+          <span>Seguridad: {formatBoolean(notifications?.securityAlerts)}</span>
+          <span>Sync errors: {formatBoolean(notifications?.syncErrors)}</span>
+          <span>Digest: {formatBoolean(notifications?.weeklyDigest)}</span>
+        </article>
+        <article>
+          <BrainCircuit size={24} />
+          <strong>Clasificacion</strong>
+          <span>Auto: {formatBoolean(classification?.autoClassify)}</span>
+          <span>Riesgo alerta: {classification?.minRiskScoreForAlert ?? "n/d"}</span>
+          <span>Revision alto riesgo: {formatBoolean(classification?.requireReviewForHighRisk)}</span>
+        </article>
+        <article>
+          <HardDrive size={24} />
+          <strong>Retencion</strong>
+          <span>Cuerpos: {formatDays(retention?.keepEmailBodiesDays)}</span>
+          <span>Auditoria: {formatDays(retention?.keepAuditLogsDays)}</span>
+        </article>
       </div>
     </SectionPanel>
   );
+}
+
+function formatBoolean(value: boolean | undefined): string {
+  if (value === undefined) {
+    return "n/d";
+  }
+
+  return value ? "on" : "off";
+}
+
+function formatDays(value: number | undefined): string {
+  if (value === undefined) {
+    return "n/d";
+  }
+
+  return `${value} dias`;
 }

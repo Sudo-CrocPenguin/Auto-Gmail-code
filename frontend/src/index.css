@@ -76,7 +76,8 @@ body::after {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -267,6 +268,24 @@ label > span {
   min-width: 0;
   outline: none;
   width: 100%;
+}
+
+select,
+.rule-editor input:not([type="checkbox"]),
+.rule-editor__static {
+  background: rgba(4, 8, 18, 0.9);
+  border: 1px solid rgba(126, 164, 183, 0.32);
+  color: var(--text);
+  min-height: 2.65rem;
+  padding: 0.66rem 0.75rem;
+  width: 100%;
+}
+
+select:focus,
+.rule-editor input:focus {
+  border-color: var(--cyan);
+  box-shadow: var(--shadow-cyan);
+  outline: none;
 }
 
 .form-error,
@@ -508,6 +527,50 @@ label > span {
   gap: 0.7rem;
 }
 
+.inbox-layout,
+.rules-layout {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, 0.85fr);
+}
+
+.inbox-filters,
+.rule-editor {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.inbox-filters .range-filter {
+  grid-column: span 2;
+}
+
+.range-filter input[type="range"] {
+  accent-color: var(--cyan);
+  width: 100%;
+}
+
+.toggle-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  grid-column: span 2;
+}
+
+.toggle-strip label,
+.check-row {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.toggle-strip input,
+.check-row input {
+  accent-color: var(--green);
+}
+
 .bar-row {
   align-items: center;
   display: grid;
@@ -585,7 +648,19 @@ label > span {
 }
 
 .rule-row {
-  grid-template-columns: 2rem minmax(13rem, 1fr) max-content 5rem;
+  grid-template-columns: 2rem minmax(13rem, 1fr) max-content 5rem max-content;
+}
+
+.email-row {
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+}
+
+.email-row:hover,
+.email-row--active {
+  border-color: rgba(51, 247, 255, 0.55);
+  box-shadow: var(--shadow-cyan);
 }
 
 .account-row strong,
@@ -604,6 +679,126 @@ label > span {
   align-items: center;
   display: inline-flex;
   gap: 0.25rem;
+}
+
+.email-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.email-detail__header {
+  display: grid;
+  gap: 1rem;
+}
+
+.email-detail__header h3 {
+  color: #ffffff;
+  font-size: 1.15rem;
+  margin: 0.6rem 0 0.2rem;
+}
+
+.email-detail__header p,
+.email-detail__body,
+.classification-note,
+.alert-row p {
+  color: var(--muted);
+}
+
+.email-detail__actions,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.score-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.score-grid div {
+  background: rgba(51, 247, 255, 0.06);
+  border: 1px solid rgba(51, 247, 255, 0.18);
+  display: grid;
+  gap: 0.2rem;
+  min-height: 4.4rem;
+  padding: 0.75rem;
+}
+
+.score-grid span,
+.detail-list dt,
+.rule-editor__static > span {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.score-grid strong {
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+}
+
+.email-detail__body {
+  background: rgba(4, 8, 18, 0.72);
+  border: 1px solid rgba(126, 164, 183, 0.18);
+  max-height: 14rem;
+  overflow: auto;
+  padding: 0.9rem;
+}
+
+.detail-list {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.detail-list div {
+  min-width: 0;
+}
+
+.detail-list dd {
+  color: #ffffff;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.attachment-list span,
+.external-link {
+  align-items: center;
+  border: 1px solid rgba(126, 164, 183, 0.28);
+  color: var(--text);
+  display: inline-flex;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.55rem;
+  text-decoration: none;
+}
+
+.external-link {
+  justify-self: start;
+}
+
+.rule-editor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.rule-editor .neon-button {
+  align-self: end;
+}
+
+.rule-editor__static {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
 }
 
 .settings-grid {
@@ -666,7 +861,13 @@ label > span {
   }
 
   .dashboard-grid,
-  .settings-grid {
+  .settings-grid,
+  .inbox-layout,
+  .rules-layout,
+  .inbox-filters,
+  .rule-editor,
+  .score-grid,
+  .detail-list {
     grid-template-columns: 1fr;
   }
 
@@ -689,5 +890,10 @@ label > span {
   .alert-row,
   .rule-row {
     grid-template-columns: 1fr;
+  }
+
+  .inbox-filters .range-filter,
+  .toggle-strip {
+    grid-column: auto;
   }
 }

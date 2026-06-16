@@ -13,12 +13,15 @@ import { BrowserTokenStorage } from "../../shared/infrastructure/storage/browser
 import { WorkspaceOverviewService } from "./workspace-overview.service";
 
 export interface AppServices {
+  alertRepository: AlertApiRepository;
   apiBaseUrl: string;
   authRepository: AuthApiRepository;
+  emailRepository: EmailApiRepository;
   gmailRepository: GmailAccountApiRepository;
   loginUser: LoginUserUseCase;
   logoutUser: LogoutUserUseCase;
   overview: WorkspaceOverviewService;
+  ruleRepository: RuleApiRepository;
   tokenStorage: BrowserTokenStorage;
 }
 
@@ -34,8 +37,10 @@ export function createAppServices(): AppServices {
   const settingsRepository = new SettingsApiRepository(httpClient);
 
   return {
+    alertRepository,
     apiBaseUrl: runtimeConfig.apiBaseUrl,
     authRepository,
+    emailRepository,
     gmailRepository,
     loginUser: new LoginUserUseCase(authRepository),
     logoutUser: new LogoutUserUseCase(authRepository),
@@ -47,6 +52,7 @@ export function createAppServices(): AppServices {
       ruleRepository,
       settingsRepository
     ),
+    ruleRepository,
     tokenStorage,
   };
 }

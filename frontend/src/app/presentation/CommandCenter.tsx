@@ -3,8 +3,10 @@ import { LogOut, RefreshCcw, ShieldCheck } from "lucide-react";
 import { AlertsPanel } from "../../features/alerts/presentation/AlertsPanel";
 import { AnalyticsPanel } from "../../features/analytics/presentation/AnalyticsPanel";
 import type { AuthSession } from "../../features/auth/domain/auth-session.entity";
+import type { EmailDetail, EmailListQuery } from "../../features/emails/domain/email-message.entity";
 import { InboxPanel } from "../../features/emails/presentation/InboxPanel";
 import { GmailPanel } from "../../features/gmail/presentation/GmailPanel";
+import type { AutomationRule, CreateAutomationRuleInput } from "../../features/rules/domain/automation-rule.entity";
 import { RulesPanel } from "../../features/rules/presentation/RulesPanel";
 import { SettingsPanel } from "../../features/settings/presentation/SettingsPanel";
 import { NeonButton } from "../../shared/presentation/components/neon-button";
@@ -18,10 +20,19 @@ interface CommandCenterProps {
   error: string | null;
   isLoading: boolean;
   overview: WorkspaceOverview;
+  selectedEmail: EmailDetail | null;
   session: AuthSession;
+  onApplyEmailFilters: (query: EmailListQuery) => Promise<void>;
+  onCreateRule: (input: CreateAutomationRuleInput) => Promise<void>;
+  onIgnoreAlert: (alertId: string) => Promise<void>;
   onLogout: () => Promise<void>;
+  onMarkEmailImportant: (emailId: string) => Promise<void>;
+  onMarkEmailReviewed: (emailId: string) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onResolveAlert: (alertId: string) => Promise<void>;
+  onSelectEmail: (emailId: string) => Promise<void>;
   onSetActiveModule: (module: AppModule) => void;
+  onSetRuleEnabled: (rule: AutomationRule) => Promise<void>;
   onStartOAuth: () => Promise<void>;
   onSyncAccount: (accountId: string) => Promise<void>;
 }
@@ -32,10 +43,19 @@ export function CommandCenter({
   error,
   isLoading,
   overview,
+  selectedEmail,
   session,
+  onApplyEmailFilters,
+  onCreateRule,
+  onIgnoreAlert,
   onLogout,
+  onMarkEmailImportant,
+  onMarkEmailReviewed,
   onRefresh,
+  onResolveAlert,
+  onSelectEmail,
   onSetActiveModule,
+  onSetRuleEnabled,
   onStartOAuth,
   onSyncAccount,
 }: CommandCenterProps) {
@@ -95,9 +115,33 @@ export function CommandCenter({
         {activeModule === "gmail" ? (
           <GmailPanel accounts={overview.accounts} onStartOAuth={onStartOAuth} onSyncAccount={onSyncAccount} />
         ) : null}
-        {activeModule === "emails" ? <InboxPanel emails={overview.emails} /> : null}
-        {activeModule === "alerts" ? <AlertsPanel alerts={overview.alerts} /> : null}
-        {activeModule === "rules" ? <RulesPanel rules={overview.rules} /> : null}
+        {activeModule === "emails" ? (
+          <InboxPanel
+            emails={overview.emails}
+            isLoading={isLoading}
+            selectedEmail={selectedEmail}
+            onApplyFilters={onApplyEmailFilters}
+            onMarkImportant={onMarkEmailImportant}
+            onMarkReviewed={onMarkEmailReviewed}
+            onSelectEmail={onSelectEmail}
+          />
+        ) : null}
+        {activeModule === "alerts" ? (
+          <AlertsPanel
+            alerts={overview.alerts}
+            isLoading={isLoading}
+            onIgnoreAlert={onIgnoreAlert}
+            onResolveAlert={onResolveAlert}
+          />
+        ) : null}
+        {activeModule === "rules" ? (
+          <RulesPanel
+            isLoading={isLoading}
+            rules={overview.rules}
+            onCreateRule={onCreateRule}
+            onToggleRule={onSetRuleEnabled}
+          />
+        ) : null}
         {activeModule === "settings" ? <SettingsPanel apiBaseUrl={apiBaseUrl} settings={overview.settings} /> : null}
       </section>
     </main>
