@@ -187,6 +187,12 @@ Mas detalle en [docs/api.md](docs/api.md).
 
 Ver [docs/security.md](docs/security.md).
 
+Guias operativas relacionadas:
+
+- [Google Cloud OAuth](docs/google-oauth.md)
+- [Runbook de errores Gmail](docs/gmail-errors-runbook.md)
+- [Rotacion de secretos](docs/secrets-rotation.md)
+
 ## Plan de desarrollo
 
 El plan vivo de desarrollo backend esta en [docs/backend-development-plan.md](docs/backend-development-plan.md). Ese documento ordena las fases de trabajo, criterios de terminado, ramas recomendadas y relacion con el backlog de [todo.md](todo.md).

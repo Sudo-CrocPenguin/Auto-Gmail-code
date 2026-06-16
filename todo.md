@@ -71,13 +71,11 @@ Falta una prueba manual completa con Google Cloud:
 Cuando Gmail API rechace credenciales:
 
 - Definir estrategia fina para limpiar access token vencido sin perder informacion recuperable.
-- Documentar el flujo operativo de reconexion para soporte.
 
 ### 4. Hardening de secretos
 
 Actualmente `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` vienen de `.env`. Falta:
 
-- Documentar rotacion de `TOKEN_ENCRYPTION_KEY`.
 - Definir estrategia de re-cifrado de tokens si cambia la clave.
 - Evitar logs accidentales de variables sensibles.
 
@@ -343,11 +341,8 @@ Ya existe GitHub Actions para `npm run check`, migraciones, seed y `npm run test
 
 ### 28. Documentacion operativa avanzada
 
-Crear o ampliar:
+Ya existen guias de Google OAuth, runbook de errores Gmail y rotacion de secretos. Falta:
 
-- Guia de Google Cloud OAuth.
-- Guia de recuperacion de tokens revocados.
-- Runbook de errores Gmail.
 - Contrato OpenAPI completo.
 
 ## Criterio sugerido para declarar backend v1 listo
