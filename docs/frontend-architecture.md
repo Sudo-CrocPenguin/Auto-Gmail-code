@@ -8,7 +8,7 @@ El frontend web de Auto-Gmail-code es una aplicacion React + TypeScript creada c
 
 Sirve para que el usuario pueda iniciar sesion, revisar el estado del workspace, conectar o sincronizar cuentas Gmail, consultar correos, inspeccionar alertas, ver reglas automaticas y validar settings sin usar curl ni herramientas externas.
 
-La consola ya no es solo lectura: permite registrar usuario propietario, iniciar sesion, registrar cuentas Gmail reales con OAuth, filtrar la bandeja, abrir detalle de correos, marcar correos como revisados o importantes, resolver o ignorar alertas y crear/pausar/activar reglas automaticas.
+La consola ya no es solo lectura: permite registrar usuario propietario, iniciar sesion, registrar varias cuentas Gmail reales dentro de ese usuario con OAuth, filtrar la bandeja, abrir detalle de correos, marcar correos como revisados o importantes, resolver o ignorar alertas y crear/pausar/activar reglas automaticas.
 
 ## Como funciona
 
@@ -50,6 +50,15 @@ Las operaciones con efectos laterales se coordinan en `App`:
 - `analytics`: resumen, categorias, trafico por dia y remitentes top.
 - `rules`: reglas automaticas, formulario de creacion rapida, activacion/pausa y conteo de aplicaciones.
 - `settings`: tema, idioma, URL de API activa, notificaciones, clasificacion y retencion.
+
+## Modelo De Cuenta
+
+El frontend separa dos conceptos:
+
+- Cuenta Auto-Gmail: usuario y password propios del sistema, con JWT y workspace.
+- Cuenta Gmail: mailbox externo autorizado por OAuth y asociado al workspace del usuario.
+
+Un usuario Auto-Gmail puede registrar varias cuentas Gmail. El modulo `gmail` lista todas las cuentas asociadas al workspace y permite repetir OAuth para agregar otra. El modulo `emails` muestra una bandeja unificada y tambien permite filtrar por una cuenta Gmail especifica.
 
 ## Normalizacion de contratos
 

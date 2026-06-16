@@ -12,6 +12,7 @@ Sirve para validar y operar desde navegador las capacidades ya disponibles en el
 
 - Autenticacion con JWT propio del backend.
 - Registro de usuario propietario y workspace desde `POST /api/auth/register`.
+- Gestion de una cuenta interna Auto-Gmail con varias cuentas Gmail registradas dentro.
 - Carga de resumen analytics del workspace.
 - Consulta de cuentas Gmail conectadas.
 - Inicio de OAuth Gmail desde `POST /api/gmail/oauth/start`.
@@ -90,7 +91,9 @@ Cada feature separa:
 
 ### Registro y cuenta propia
 
-El formulario inicial tiene modo `Entrar` y `Crear cuenta`. En `Crear cuenta`, el frontend envia `name`, `email`, `password`, `workspaceName` y `acceptTerms` a `POST /api/auth/register`. Si el backend responde correctamente, la sesion queda activa, el JWT se guarda localmente y la consola abre el modulo Gmail para registrar cuentas.
+El formulario inicial tiene modo `Entrar` y `Crear cuenta`. En `Crear cuenta`, el frontend envia `name`, `email`, `password`, `workspaceName` y `acceptTerms` a `POST /api/auth/register`. Si el backend responde correctamente, la sesion queda activa, el JWT se guarda localmente y la consola abre el modulo Gmail.
+
+Esa cuenta interna de Auto-Gmail es el contenedor de trabajo. Dentro de ella puedes registrar una o muchas cuentas Gmail reales, todas asociadas al mismo workspace del usuario autenticado.
 
 ### Gmail real
 
@@ -98,9 +101,11 @@ El modulo `gmail` llama `POST /api/gmail/oauth/start`. Si el backend tiene `GOOG
 
 Si faltan credenciales Google, el frontend no abre el flujo demo: muestra un aviso para evitar confundir datos reales con simulacion.
 
+El boton cambia entre `Registrar primer Gmail` y `Registrar otro Gmail`. Puedes repetir el OAuth por cada cuenta Gmail que quieras conectar. La lista muestra cantidad de cuentas, conectadas y correos indexados.
+
 ### Inbox
 
-El modulo `emails` permite buscar por texto, filtrar por categoria, riesgo minimo, no leidos, importantes o accion requerida. Al seleccionar un correo, el frontend llama `GET /api/emails/:id` y muestra remitente, cuenta, destinatarios, cuerpo de texto, adjuntos y scores de clasificacion. Las acciones `POST /api/emails/:id/mark-reviewed` y `POST /api/emails/:id/mark-important` actualizan el backend y luego refrescan la consola.
+El modulo `emails` permite buscar por texto, filtrar por cuenta Gmail, categoria, riesgo minimo, no leidos, importantes o accion requerida. Al seleccionar un correo, el frontend llama `GET /api/emails/:id` y muestra remitente, cuenta, destinatarios, cuerpo de texto, adjuntos, etiquetas Gmail, categorias secundarias, scores de clasificacion e historial de acciones. Las acciones `POST /api/emails/:id/mark-reviewed` y `POST /api/emails/:id/mark-important` actualizan el backend y luego refrescan la consola.
 
 ### Alertas
 
