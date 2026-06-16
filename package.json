@@ -1,6 +1,6 @@
 {
   "name": "auto-gmail-code-backend",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Backend API for Auto-Gmail-code, a Gmail OAuth synchronization and email classification platform.",
   "main": "dist/main.js",
   "scripts": {
