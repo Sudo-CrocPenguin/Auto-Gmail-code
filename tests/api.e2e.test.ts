@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
@@ -43,6 +45,49 @@ describe("Auto-Gmail-code API", () => {
     expect(response.status).toBe(200);
     expect(response.body.user.email).toBe("owner@autogmail.local");
     expect(response.body.workspace.name).toBe("Auto-Gmail-code Demo");
+  });
+
+  it("actualiza perfil y permite cambiar password del usuario autenticado", async () => {
+    const suffix = randomUUID();
+    const email = `perfil-${suffix}@autogmail.local`;
+    const currentPassword = "Password123!";
+    const newPassword = "Password456!";
+
+    const registration = await request(app).post("/api/auth/register").send({
+      name: "Usuario Perfil",
+      email,
+      password: currentPassword,
+      workspaceName: "Workspace Perfil",
+      acceptTerms: true,
+    });
+
+    expect(registration.status).toBe(201);
+    const token = registration.body.accessToken as string;
+
+    const profile = await request(app)
+      .patch("/api/users/me")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Usuario Perfil Editado" });
+
+    expect(profile.status).toBe(200);
+    expect(profile.body.data.name).toBe("Usuario Perfil Editado");
+    expect(JSON.stringify(profile.body)).not.toContain("passwordHash");
+
+    const password = await request(app)
+      .patch("/api/auth/password")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ currentPassword, newPassword });
+
+    expect(password.status).toBe(200);
+    expect(password.body.success).toBe(true);
+
+    const loginWithNewPassword = await request(app).post("/api/auth/login").send({
+      email,
+      password: newPassword,
+    });
+
+    expect(loginWithNewPassword.status).toBe(200);
+    expect(loginWithNewPassword.body.accessToken).toEqual(expect.any(String));
   });
 
   it("lista cuentas Gmail y permite iniciar OAuth sin pedir contrasena Gmail", async () => {

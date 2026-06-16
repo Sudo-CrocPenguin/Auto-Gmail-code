@@ -40,6 +40,16 @@ export class InMemoryUserRepository implements UserRepository {
     const user = this.database.users.find((currentUser) => currentUser.id === id);
     return user ? clone(user) : null;
   }
+
+  public async update(id: string, data: Parameters<UserRepository["update"]>[1]) {
+    const user = this.database.users.find((currentUser) => currentUser.id === id);
+    if (!user) {
+      return null;
+    }
+
+    Object.assign(user, data);
+    return clone(user);
+  }
 }
 
 export class InMemoryWorkspaceRepository implements WorkspaceRepository {

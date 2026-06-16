@@ -30,6 +30,7 @@ El flujo de una peticion privada es:
 ## Modulos
 
 - `auth`: registro, login, logout y usuario autenticado.
+- `users`: perfil del usuario autenticado.
 - `workspace`: consulta y actualizacion del workspace actual.
 - `gmail-accounts`: cuentas Gmail, OAuth, sync, reconnect y disconnect.
 - `emails`: bandeja unificada, detalle, clasificacion, revisado e importante.

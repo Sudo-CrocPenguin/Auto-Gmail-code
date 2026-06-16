@@ -142,6 +142,10 @@ describe("Prisma persistence", () => {
 
     await expect(workspaces.findById(workspaceId)).resolves.toMatchObject({ id: workspaceId });
     await expect(users.findByEmail(`prisma-${suffix}@autogmail.local`)).resolves.toMatchObject({ id: userId });
+    await expect(users.update(userId, { name: "Prisma Test Actualizado" })).resolves.toMatchObject({
+      id: userId,
+      name: "Prisma Test Actualizado",
+    });
     await expect(settings.getByWorkspaceId(workspaceId)).resolves.toMatchObject({ theme: "dark" });
     await expect(gmailAccounts.findById(gmailAccountId)).resolves.toMatchObject({ id: gmailAccountId });
     await expect(oauthTokens.findByAccountId(gmailAccountId)).resolves.toMatchObject({ gmailAccountId });

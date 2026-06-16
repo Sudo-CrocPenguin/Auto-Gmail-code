@@ -15,6 +15,7 @@ export function createAuthRouter(
   router.post("/login", authRateLimit.handler, controller.login);
   router.get("/me", authMiddleware.handler, controller.me);
   router.post("/logout", authMiddleware.handler, controller.logout);
+  router.patch("/password", authMiddleware.handler, authRateLimit.handler, controller.password);
 
   return router;
 }

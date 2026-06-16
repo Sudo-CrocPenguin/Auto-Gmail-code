@@ -242,6 +242,11 @@ export class PrismaUserRepository implements UserRepository {
     });
     return user ? mapUser(user) : null;
   }
+
+  public async update(id: string, data: Parameters<UserRepository["update"]>[1]): Promise<User | null> {
+    const user = await this.client.user.update({ where: { id }, data }).catch(() => null);
+    return user ? mapUser(user) : null;
+  }
 }
 
 export class PrismaWorkspaceRepository implements WorkspaceRepository {

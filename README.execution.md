@@ -269,6 +269,8 @@ Usuario actual:
 
 ```txt
 GET /api/auth/me
+PATCH /api/users/me
+PATCH /api/auth/password
 ```
 
 Settings:

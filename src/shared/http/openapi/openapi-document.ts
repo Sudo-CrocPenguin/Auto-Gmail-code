@@ -468,6 +468,32 @@ export const openApiDocument = {
         },
       },
     },
+    "/auth/password": {
+      patch: {
+        summary: "Cambiar contrasena del usuario autenticado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["currentPassword", "newPassword"],
+                properties: {
+                  currentPassword: { type: "string" },
+                  newPassword: { type: "string", minLength: 8 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Contrasena actualizada", content: { "application/json": { schema: { type: "object", properties: { success: { type: "boolean" } } } } } },
+          "400": validationErrorResponse,
+          "401": unauthorizedResponse,
+          "429": rateLimitResponse,
+        },
+      },
+    },
     "/auth/me": {
       get: {
         summary: "Usuario autenticado",
@@ -487,6 +513,30 @@ export const openApiDocument = {
               },
             },
           },
+          "401": unauthorizedResponse,
+        },
+      },
+    },
+    "/users/me": {
+      patch: {
+        summary: "Actualizar perfil del usuario autenticado",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name"],
+                properties: {
+                  name: { type: "string", minLength: 2, maxLength: 120 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Perfil actualizado", content: { "application/json": { schema: { type: "object", properties: { data: { $ref: "#/components/schemas/PublicUser" } } } } } },
+          "400": validationErrorResponse,
           "401": unauthorizedResponse,
         },
       },

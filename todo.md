@@ -24,6 +24,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - CI backend en GitHub Actions con build, tests, migraciones, seed y prueba Prisma sobre PostgreSQL.
 - Sync Gmail usa `nextPageToken` en mensajes recientes e historial incremental.
 - Motor inicial de reglas automaticas durante Gmail Sync para correos nuevos.
+- Perfil de usuario y cambio de password autenticado.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -181,10 +182,13 @@ Actualmente el rol viene en usuario, pero falta modelo completo:
 
 ### 14. Gestion de perfil y password
 
-Faltan endpoints:
+Ya existen:
 
 - `PATCH /api/users/me`
 - `PATCH /api/auth/password`
+
+Falta:
+
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
 - invalidacion de tokens tras cambio de password.

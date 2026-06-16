@@ -16,6 +16,7 @@ import { createAlertRouter } from "../features/alerts/presentation/http/alert.ro
 import { ListAuditLogsUseCase } from "../features/audit/application/list-audit-logs.use-case";
 import { AuditController } from "../features/audit/presentation/http/audit.controller";
 import { createAuditRouter } from "../features/audit/presentation/http/audit.routes";
+import { ChangePasswordUseCase } from "../features/auth/application/change-password.use-case";
 import { CorrectEmailClassificationUseCase } from "../features/emails/application/correct-email-classification.use-case";
 import { GetEmailDetailUseCase } from "../features/emails/application/get-email-detail.use-case";
 import { ListEmailsUseCase } from "../features/emails/application/list-emails.use-case";
@@ -58,6 +59,9 @@ import { GetWorkspaceSettingsUseCase } from "../features/settings/application/ge
 import { UpdateWorkspaceSettingsUseCase } from "../features/settings/application/update-workspace-settings.use-case";
 import { SettingsController } from "../features/settings/presentation/http/settings.controller";
 import { createSettingsRouter } from "../features/settings/presentation/http/settings.routes";
+import { UpdateCurrentUserProfileUseCase } from "../features/users/application/update-current-user-profile.use-case";
+import { UserController } from "../features/users/presentation/http/user.controller";
+import { createUserRouter } from "../features/users/presentation/http/user.routes";
 import { GetCurrentWorkspaceUseCase } from "../features/workspace/application/get-current-workspace.use-case";
 import { UpdateCurrentWorkspaceUseCase } from "../features/workspace/application/update-current-workspace.use-case";
 import { WorkspaceController } from "../features/workspace/presentation/http/workspace.controller";
@@ -106,6 +110,7 @@ import { TokenEncryptionService } from "./infrastructure/security/token-encrypti
 export interface ApplicationContainer {
   routes: {
     auth: Router;
+    users: Router;
     workspace: Router;
     gmail: Router;
     emails: Router;
@@ -255,6 +260,10 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new LoginUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
     new GetAuthenticatedUserUseCase(dependencies.users, dependencies.workspaces),
     new LogoutUserUseCase(dependencies.auditLogs),
+    new ChangePasswordUseCase(dependencies.users, dependencies.auditLogs),
+  );
+  const userController = new UserController(
+    new UpdateCurrentUserProfileUseCase(dependencies.users, dependencies.auditLogs),
   );
 
   const workspaceController = new WorkspaceController(
@@ -344,6 +353,7 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
   return {
     routes: {
       auth: createAuthRouter(authController, dependencies.authMiddleware, dependencies.authRateLimit),
+      users: createUserRouter(userController, dependencies.authMiddleware),
       workspace: createWorkspaceRouter(workspaceController, dependencies.authMiddleware),
       gmail: createGmailAccountRouter(
         gmailAccountController,
