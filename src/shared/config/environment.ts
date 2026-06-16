@@ -33,6 +33,7 @@ const environmentSchema = z.object({
       "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify",
     ),
   GMAIL_SYNC_MAX_MESSAGES: z.coerce.number().int().positive().max(100).default(25),
+  GMAIL_ATTACHMENT_MAX_BYTES: z.coerce.number().int().positive().default(5 * 1024 * 1024),
 });
 
 const parsedEnvironment = environmentSchema.parse(process.env);
@@ -91,5 +92,6 @@ export const environment = {
     redirectUri: parsedEnvironment.GOOGLE_OAUTH_REDIRECT_URI,
     scopes: parsedEnvironment.GOOGLE_OAUTH_SCOPES.split(" ").filter(Boolean),
     syncMaxMessages: parsedEnvironment.GMAIL_SYNC_MAX_MESSAGES,
+    attachmentMaxBytes: parsedEnvironment.GMAIL_ATTACHMENT_MAX_BYTES,
   },
 } as const;

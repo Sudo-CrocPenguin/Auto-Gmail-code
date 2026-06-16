@@ -18,6 +18,7 @@ import { AuditController } from "../features/audit/presentation/http/audit.contr
 import { createAuditRouter } from "../features/audit/presentation/http/audit.routes";
 import { ChangePasswordUseCase } from "../features/auth/application/change-password.use-case";
 import { CorrectEmailClassificationUseCase } from "../features/emails/application/correct-email-classification.use-case";
+import { DownloadEmailAttachmentUseCase } from "../features/emails/application/download-email-attachment.use-case";
 import { GetEmailDetailUseCase } from "../features/emails/application/get-email-detail.use-case";
 import { ListEmailsUseCase } from "../features/emails/application/list-emails.use-case";
 import { MarkEmailImportantUseCase } from "../features/emails/application/mark-email-important.use-case";
@@ -315,6 +316,12 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new CorrectEmailClassificationUseCase(dependencies.emails, dependencies.auditLogs),
     new MarkEmailReviewedUseCase(dependencies.emails, dependencies.auditLogs),
     new MarkEmailImportantUseCase(dependencies.emails, dependencies.auditLogs),
+    new DownloadEmailAttachmentUseCase(
+      dependencies.emails,
+      dependencies.gmailTokenVault,
+      dependencies.googleGmailClient,
+      dependencies.auditLogs,
+    ),
   );
 
   const alertController = new AlertController(

@@ -57,6 +57,7 @@ jobs:
       GOOGLE_OAUTH_REDIRECT_URI: http://localhost:4000/api/gmail/oauth/callback
       GOOGLE_OAUTH_SCOPES: https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify
       GMAIL_SYNC_MAX_MESSAGES: 25
+      GMAIL_ATTACHMENT_MAX_BYTES: 5242880
 
     steps:
       - name: Checkout

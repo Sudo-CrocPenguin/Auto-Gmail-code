@@ -175,6 +175,33 @@ describe("Auto-Gmail-code API", () => {
     expect(correction.body.data.classification.primaryCategory).toBe("REVIEW");
   });
 
+  it("valida descarga bajo demanda de adjuntos sin exponer contenido sin credenciales", async () => {
+    const token = await login();
+
+    const inbox = await request(app)
+      .get("/api/emails?hasAttachments=true")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(inbox.status).toBe(200);
+    expect(inbox.body.data[0].attachmentCount).toBeGreaterThan(0);
+
+    const emailId = inbox.body.data[0].id as string;
+    const detail = await request(app)
+      .get(`/api/emails/${emailId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(detail.status).toBe(200);
+    const attachmentId = detail.body.data.attachments[0].id as string;
+
+    const attachment = await request(app)
+      .get(`/api/emails/${emailId}/attachments/${attachmentId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(attachment.status).toBe(409);
+    expect(attachment.body.error.code).toBe("GMAIL_RECONNECT_REQUIRED");
+    expect(JSON.stringify(attachment.body)).not.toContain("contentBase64");
+  });
+
   it("resuelve alertas y registra la accion en auditoria", async () => {
     const token = await login();
 

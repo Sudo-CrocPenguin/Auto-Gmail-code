@@ -769,6 +769,45 @@ export const openApiDocument = {
         },
       },
     },
+    "/emails/{id}/attachments/{attachmentId}": {
+      get: {
+        summary: "Descargar adjunto bajo demanda",
+        parameters: [
+          idPathParameter,
+          { name: "attachmentId", in: "path", required: true, schema: { type: "string" } },
+        ],
+        responses: {
+          "200": {
+            description: "Adjunto codificado en base64",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      required: ["filename", "mimeType", "sizeBytes", "contentBase64", "encoding"],
+                      properties: {
+                        filename: { type: "string" },
+                        mimeType: { type: "string" },
+                        sizeBytes: { type: "number" },
+                        contentBase64: { type: "string" },
+                        encoding: { type: "string", enum: ["base64"] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": unauthorizedResponse,
+          "404": notFoundResponse,
+          "409": errorResponse,
+          "413": errorResponse,
+          "415": errorResponse,
+        },
+      },
+    },
     "/emails/{id}/classification": {
       patch: {
         summary: "Corregir clasificacion",

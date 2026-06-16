@@ -56,6 +56,26 @@ export class GoogleGmailClient {
     return "revoked";
   }
 
+  public async fetchAttachment(
+    credentials: Credentials,
+    messageId: string,
+    attachmentId: string,
+  ): Promise<Buffer> {
+    const gmail = this.createGmailClient(credentials);
+    const response = await gmail.users.messages.attachments.get({
+      userId: "me",
+      messageId,
+      id: attachmentId,
+    });
+    const data = response.data.data;
+
+    if (!data) {
+      throw new AppError("Gmail no devolvio contenido del adjunto.", 502, "GMAIL_ATTACHMENT_EMPTY");
+    }
+
+    return Buffer.from(data.replaceAll("-", "+").replaceAll("_", "/"), "base64");
+  }
+
   public async getProfile(credentials: Credentials): Promise<GmailProfile> {
     const gmail = this.createGmailClient(credentials);
     const response = await gmail.users.getProfile({ userId: "me" });

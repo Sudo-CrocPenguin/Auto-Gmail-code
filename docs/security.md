@@ -13,6 +13,7 @@ El backend evita exponer credenciales o datos sensibles de Gmail al frontend. Gm
 - Los endpoints que modifican Gmail, workspace o reglas validan rol `OWNER` o `ADMIN`.
 - `/api/auth/login` y las rutas Gmail tienen rate limiting en memoria configurable por ambiente.
 - El cuerpo HTML de correos se sanitiza con `sanitize-html` antes de responder.
+- Los adjuntos se descargan bajo demanda, con validacion de tamano maximo y bloqueo basico de tipos ejecutables.
 - Los errores de validacion devuelven codigo `VALIDATION_ERROR` y detalles controlados.
 - Las acciones sensibles generan logs de auditoria.
 - Los datos se filtran por `workspaceId` para evitar acceso cruzado entre workspaces.

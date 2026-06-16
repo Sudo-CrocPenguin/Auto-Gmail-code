@@ -58,6 +58,7 @@ GOOGLE_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:4000/api/gmail/oauth/callback
 GOOGLE_OAUTH_SCOPES=https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.modify
 GMAIL_SYNC_MAX_MESSAGES=25
+GMAIL_ATTACHMENT_MAX_BYTES=5242880
 ```
 
 Reglas:
@@ -272,6 +273,14 @@ GET /api/auth/me
 PATCH /api/users/me
 PATCH /api/auth/password
 ```
+
+Adjuntos:
+
+```txt
+GET /api/emails/:id/attachments/:attachmentId
+```
+
+La descarga de adjuntos es bajo demanda. El backend valida metadata, tamano maximo (`GMAIL_ATTACHMENT_MAX_BYTES`) y tipos ejecutables basicos antes de pedir el contenido a Gmail.
 
 Settings:
 

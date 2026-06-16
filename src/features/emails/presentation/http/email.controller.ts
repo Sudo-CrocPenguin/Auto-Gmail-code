@@ -3,11 +3,12 @@ import type { RequestHandler } from "express";
 import { asyncHandler } from "../../../../shared/http/async-handler";
 import { getAuthContext } from "../../../../shared/http/request-context";
 import type { CorrectEmailClassificationUseCase } from "../../application/correct-email-classification.use-case";
+import type { DownloadEmailAttachmentUseCase } from "../../application/download-email-attachment.use-case";
 import type { GetEmailDetailUseCase } from "../../application/get-email-detail.use-case";
 import type { ListEmailsUseCase } from "../../application/list-emails.use-case";
 import type { MarkEmailImportantUseCase } from "../../application/mark-email-important.use-case";
 import type { MarkEmailReviewedUseCase } from "../../application/mark-email-reviewed.use-case";
-import { correctClassificationDto, emailIdParamsDto, listEmailsQueryDto } from "./email.dtos";
+import { correctClassificationDto, emailAttachmentParamsDto, emailIdParamsDto, listEmailsQueryDto } from "./email.dtos";
 import { presentEmailDetail, presentEmailSummary } from "./email.presenter";
 
 export class EmailController {
@@ -17,6 +18,7 @@ export class EmailController {
     private readonly correctEmailClassification: CorrectEmailClassificationUseCase,
     private readonly markEmailReviewed: MarkEmailReviewedUseCase,
     private readonly markEmailImportant: MarkEmailImportantUseCase,
+    private readonly downloadEmailAttachment: DownloadEmailAttachmentUseCase,
   ) {}
 
   public readonly list: RequestHandler = asyncHandler(async (request, response) => {
@@ -53,5 +55,10 @@ export class EmailController {
     const email = await this.markEmailImportant.execute(getAuthContext(request), id);
     response.json({ data: presentEmailDetail(email) });
   });
-}
 
+  public readonly attachment: RequestHandler = asyncHandler(async (request, response) => {
+    const { id, attachmentId } = emailAttachmentParamsDto.parse(request.params);
+    const attachment = await this.downloadEmailAttachment.execute(getAuthContext(request), id, attachmentId);
+    response.json({ data: attachment });
+  });
+}

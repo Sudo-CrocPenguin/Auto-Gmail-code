@@ -27,6 +27,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Perfil de usuario y cambio de password autenticado.
 - Desconexion Gmail intenta revocar token OAuth remoto y registra resultado.
 - Correos persisten `bodyText` separado de `bodyHtml`.
+- Descarga de adjuntos bajo demanda con limite de tamano y bloqueo basico de ejecutables.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -131,16 +132,18 @@ El CRUD de reglas ya tiene motor inicial durante sync para correos nuevos: evalu
 
 ### 10. Adjuntos
 
-Actualmente se guarda metadata de adjuntos, no contenido. Falta decidir e implementar:
+Actualmente se guarda metadata y el contenido se descarga bajo demanda desde Gmail. Ya existe:
 
-- Descargar adjunto bajo demanda.
-- Nunca descargar masivamente por defecto.
-- Validar MIME type.
-- Validar tamaño maximo.
+- `GET /api/emails/:id/attachments/:attachmentId`
+- Descarga bajo demanda, nunca masiva por defecto.
+- Validacion de tamano maximo con `GMAIL_ATTACHMENT_MAX_BYTES`.
+- Bloqueo basico de MIME/extensiones ejecutables.
+- Sin almacenamiento del contenido completo en DB.
+
+Falta:
+
 - Escanear riesgo si aplica.
-- Endpoint sugerido:
-  - `GET /api/emails/:id/attachments/:attachmentId`
-- Evitar guardar adjuntos completos en DB salvo decision explicita.
+- Ampliar allowlist/denylist de MIME segun politica final.
 
 ### 11. HTML de correos mas seguro
 

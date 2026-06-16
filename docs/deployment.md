@@ -22,6 +22,7 @@ FRONTEND_URL=https://...
 GOOGLE_CLIENT_ID=<oauth-client-id>
 GOOGLE_CLIENT_SECRET=<oauth-client-secret>
 GOOGLE_OAUTH_REDIRECT_URI=https://<api-host>/api/gmail/oauth/callback
+GMAIL_ATTACHMENT_MAX_BYTES=5242880
 ```
 
 El backend no arranca en `production` si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` usan valores por defecto, si falta `DATABASE_URL` o si `PERSISTENCE_DRIVER` no es `prisma`.
