@@ -1,8 +1,8 @@
-# Auto-Gmail-code Backend
+# Auto-Gmail-code Backend + Frontend Web
 
 Auto-Gmail-code Backend es la API HTTP para administrar una o mas cuentas Gmail desde una aplicacion propia. El usuario conecta Gmail con OAuth de Google, nunca con contrasena Gmail. El backend guarda tokens cifrados, sincroniza correos, clasifica mensajes, genera alertas, gestiona remitentes, aplica reglas automaticas y deja auditoria de acciones sensibles.
 
-Esta version es `autoGmail-code 1.0 only back`: backend listo para que el frontend web, movil o escritorio consuma contratos estables.
+El repositorio ahora incluye tambien `frontend/`, una consola web React + TypeScript con estilo cyberpunk para consumir estos contratos desde navegador.
 
 ## Que usa
 
@@ -18,6 +18,7 @@ Esta version es `autoGmail-code 1.0 only back`: backend listo para que el fronte
 - Seguridad HTTP: Helmet, CORS, rate limiting, request id y logs JSON.
 - Tests: Vitest + Supertest.
 - Infra local: Docker Compose con PostgreSQL.
+- Frontend web: Vite, React, TypeScript, lucide-react y CSS modular por capas.
 
 ## Que hace
 
@@ -37,12 +38,18 @@ Esta version es `autoGmail-code 1.0 only back`: backend listo para que el fronte
 
 ## Como se comunica
 
-El frontend se comunica por HTTP JSON.
+El frontend web en `frontend/` se comunica por HTTP JSON.
 
 Base URL local habitual:
 
 ```txt
 http://localhost:4000/api
+```
+
+URL local habitual del frontend:
+
+```txt
+http://localhost:5173
 ```
 
 Si el puerto `4000` esta ocupado, puedes levantarlo en otro puerto, por ejemplo:

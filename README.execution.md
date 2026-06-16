@@ -259,6 +259,47 @@ Readiness operativo:
 GET /api/health/ready
 ```
 
+## 10. Frontend web
+
+El frontend vive en:
+
+```txt
+frontend/
+```
+
+Que es:
+
+- Una consola web React + TypeScript para operar el backend desde navegador.
+- Usa Vite para desarrollo local y build productivo.
+- Consume la API desde `VITE_API_BASE_URL`, por defecto `http://localhost:4000/api`.
+
+Instalacion:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+```
+
+Ejecucion:
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+URL habitual:
+
+```txt
+http://localhost:5173
+```
+
+Validacion:
+
+```bash
+npm run build
+npm run lint
+```
+
 `/api/health` indica que el proceso HTTP esta vivo. `/api/health/ready` valida dependencias operativas: consulta PostgreSQL cuando `PERSISTENCE_DRIVER=prisma` y reporta si la configuracion OAuth Gmail esta completa. Todas las respuestas incluyen header `x-request-id`; si el cliente envia ese header, el backend lo respeta para correlacionar logs.
 
 Contrato OpenAPI:
