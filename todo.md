@@ -21,6 +21,7 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Request ID en respuestas y logs.
 - Logger estructurado JSON para requests y errores.
 - Readiness check en `/api/health/ready` con validacion de Prisma y configuracion OAuth Gmail.
+- CI backend en GitHub Actions con build, tests, migraciones, seed y prueba Prisma sobre PostgreSQL.
 
 ## P0 - Pendiente critico antes de produccion
 
@@ -336,13 +337,10 @@ Base creada con Dockerfile, Docker Compose, healthcheck container, variables de 
 
 ### 27. Calidad y CI
 
-Agregar:
+Ya existe GitHub Actions para `npm run check`, migraciones, seed y `npm run test:prisma` con PostgreSQL. Falta:
 
 - Linter.
 - Formatter.
-- GitHub Actions o CI equivalente.
-- `npm run check` en PR.
-- Tests Prisma con DB de test en CI.
 - Escaneo de dependencias.
 - Validacion de migraciones.
 

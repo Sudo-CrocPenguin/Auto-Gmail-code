@@ -240,6 +240,7 @@ Uso recomendado:
 - Desarrollo con DB: `npm run db:migrate`, `npm run db:seed`, `npm run dev`.
 - Validacion antes de commit: `npm run check`.
 - Validacion Prisma con DB real: definir `PRISMA_TEST_DATABASE_URL` y ejecutar `npm run test:prisma`.
+- CI: `.github/workflows/backend-check.yml` ejecuta `npm ci`, `db:generate`, `npm run check`, migraciones, seed y `npm run test:prisma` con PostgreSQL.
 - Produccion: `npm run build`, `npm run db:deploy`, `npm start`.
 
 ## 9. Endpoints de verificacion

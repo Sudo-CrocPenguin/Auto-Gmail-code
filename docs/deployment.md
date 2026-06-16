@@ -96,6 +96,21 @@ Arrancar:
 npm start
 ```
 
+## CI
+
+El workflow `.github/workflows/backend-check.yml` valida cada push a ramas GitFlow principales y cada pull request hacia `main` o `develop`.
+
+Ejecuta:
+
+- `npm ci`.
+- `npm run db:generate`.
+- `npm run check` en modo memoria.
+- `npm run db:deploy` contra PostgreSQL 16.
+- `npm run db:seed`.
+- `npm run test:prisma` con `PRISMA_TEST_DATABASE_URL`.
+
+Este pipeline sirve para detectar errores de compilacion, regresiones HTTP, migraciones rotas y fallos en repositorios Prisma antes de integrar cambios.
+
 ## Migraciones
 
 Las migraciones viven en `prisma/migrations`.
