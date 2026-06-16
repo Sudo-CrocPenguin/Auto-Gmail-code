@@ -18,6 +18,21 @@ async function login() {
 }
 
 describe("Auto-Gmail-code API", () => {
+  it("expone healthcheck basico y readiness operativo", async () => {
+    const health = await request(app).get("/api/health");
+
+    expect(health.status).toBe(200);
+    expect(health.body.status).toBe("ok");
+    expect(health.headers["x-request-id"]).toEqual(expect.any(String));
+
+    const readiness = await request(app).get("/api/health/ready");
+
+    expect(readiness.status).toBe(200);
+    expect(readiness.body.status).toBe("ok");
+    expect(readiness.body.checks.database.status).toBe("skipped");
+    expect(readiness.body.checks.gmailOAuth.status).toBe("warning");
+  });
+
   it("autentica al usuario demo y devuelve su workspace", async () => {
     const token = await login();
 

@@ -250,6 +250,14 @@ Healthcheck:
 GET /api/health
 ```
 
+Readiness operativo:
+
+```txt
+GET /api/health/ready
+```
+
+`/api/health` indica que el proceso HTTP esta vivo. `/api/health/ready` valida dependencias operativas: consulta PostgreSQL cuando `PERSISTENCE_DRIVER=prisma` y reporta si la configuracion OAuth Gmail esta completa. Todas las respuestas incluyen header `x-request-id`; si el cliente envia ese header, el backend lo respeta para correlacionar logs.
+
 Contrato OpenAPI:
 
 ```txt

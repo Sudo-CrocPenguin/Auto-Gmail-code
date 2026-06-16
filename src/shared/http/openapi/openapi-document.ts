@@ -387,6 +387,22 @@ export const openApiDocument = {
         },
       },
     },
+    "/health/ready": {
+      get: {
+        security: [],
+        summary: "Readiness operativo",
+        responses: {
+          "200": {
+            description: "Dependencias operativas disponibles",
+            content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          },
+          "503": {
+            description: "Una dependencia obligatoria no esta disponible",
+            content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          },
+        },
+      },
+    },
     "/auth/register": {
       post: {
         security: [],

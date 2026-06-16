@@ -1,18 +1,20 @@
 import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
-import morgan from "morgan";
 
 import { environment } from "./shared/config/environment";
 import { buildContainer, type ApplicationContainer } from "./shared/container";
 import { errorHandler } from "./shared/http/middlewares/error-handler.middleware";
 import { notFoundHandler } from "./shared/http/middlewares/not-found.middleware";
+import { requestIdMiddleware } from "./shared/http/middlewares/request-id.middleware";
+import { requestLoggerMiddleware } from "./shared/http/middlewares/request-logger.middleware";
 import { healthRouter } from "./shared/http/routes/health.routes";
 import { openApiRouter } from "./shared/http/routes/openapi.routes";
 
 export function createApp(container: ApplicationContainer = buildContainer()): Express {
   const app = express();
 
+  app.use(requestIdMiddleware);
   app.use(helmet());
   app.use(
     cors({
@@ -24,7 +26,7 @@ export function createApp(container: ApplicationContainer = buildContainer()): E
   app.use(express.urlencoded({ extended: true }));
 
   if (environment.nodeEnv !== "test") {
-    app.use(morgan("dev"));
+    app.use(requestLoggerMiddleware);
   }
 
   app.use(`${environment.apiPrefix}/health`, healthRouter);

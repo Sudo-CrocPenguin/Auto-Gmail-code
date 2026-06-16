@@ -18,18 +18,18 @@ Este documento lista lo que falta o conviene reforzar en el backend despues de l
 - Alertas, remitentes, reglas, analitica, auditoria y settings.
 - OpenAPI base en `/api/openapi.json`.
 - Tests de integracion principales.
+- Request ID en respuestas y logs.
+- Logger estructurado JSON para requests y errores.
+- Readiness check en `/api/health/ready` con validacion de Prisma y configuracion OAuth Gmail.
 
 ## P0 - Pendiente critico antes de produccion
 
 ### 1. Persistencia Prisma validada contra una base real
 
-Aunque el codigo Prisma compila, falta ejecutar y validar en una instancia PostgreSQL real:
+Ya se valido PostgreSQL real con Docker: migraciones `db:deploy`, seed demo y `npm run test:prisma` contra `auto_gmail_code_test`. Falta la verificacion manual completa con la API corriendo en modo Prisma:
 
-- Levantar PostgreSQL local o de desarrollo.
-- Ejecutar `npm run db:migrate`.
-- Ejecutar `npm run db:seed`.
 - Arrancar con `PERSISTENCE_DRIVER=prisma`.
-- Validar manualmente login con usuario demo.
+- Validar login con usuario demo.
 - Conectar Gmail real.
 - Verificar que al reiniciar el servidor se conservan:
   - usuario demo,
@@ -86,7 +86,7 @@ El contrato ya incluye schemas principales, errores estandar, paginacion, reques
 
 ### 6. Tests con PostgreSQL real
 
-Los tests actuales usan memoria. Falta suite con DB:
+Ya existe `npm run test:prisma` y se valido contra PostgreSQL de Docker. Falta ampliar cobertura:
 
 - Automatizar creacion y limpieza de DB de test.
 - Agregar casos HTTP completos ejecutando `PERSISTENCE_DRIVER=prisma`.
@@ -222,10 +222,8 @@ La auditoria existe. Falta mejorar:
 
 ### 17. Observabilidad
 
-Agregar:
+Ya existe request ID, logger estructurado JSON y readiness check operativo. Falta:
 
-- Logger estructurado.
-- Request ID.
 - Correlation ID por sync.
 - Metricas:
   - tiempo de respuesta,
@@ -233,10 +231,7 @@ Agregar:
   - mensajes sincronizados,
   - fallos OAuth,
   - cuentas que requieren reconexion.
-- Healthcheck extendido:
-  - DB disponible,
-  - Prisma conectado,
-  - config Gmail presente.
+- Exportar metricas para Prometheus/OpenTelemetry o proveedor equivalente.
 
 ### 18. Manejo centralizado de errores Gmail API
 
@@ -347,7 +342,7 @@ Agregar:
 - Formatter.
 - GitHub Actions o CI equivalente.
 - `npm run check` en PR.
-- Tests Prisma con DB de test.
+- Tests Prisma con DB de test en CI.
 - Escaneo de dependencias.
 - Validacion de migraciones.
 

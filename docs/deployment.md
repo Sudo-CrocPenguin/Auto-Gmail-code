@@ -52,10 +52,21 @@ Verificar healthcheck:
 curl http://localhost:4000/api/health
 ```
 
+Verificar readiness:
+
+```bash
+curl http://localhost:4000/api/health/ready
+```
+
+`/api/health` solo confirma que el proceso HTTP responde. `/api/health/ready` valida PostgreSQL cuando se usa Prisma y confirma si las credenciales OAuth Gmail estan configuradas. En `production`, una configuracion Gmail incompleta aparece como error de readiness.
+
 Ejecutar suite Prisma contra la base de Compose:
 
 ```bash
-PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public npm run test:prisma
+docker compose exec -T postgres createdb -U postgres auto_gmail_code_test
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run db:deploy
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run db:seed
+PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run test:prisma
 ```
 
 ## Despliegue sin Docker
@@ -122,18 +133,39 @@ Frecuencia recomendada para primera version:
 
 ## Healthcheck
 
-Endpoint publico:
+Endpoints publicos:
 
 ```txt
 GET /api/health
+GET /api/health/ready
 ```
 
-Respuesta esperada:
+Respuesta esperada para `/api/health`:
 
 ```json
 {
   "status": "ok",
   "service": "auto-gmail-code-api",
   "timestamp": "2026-06-16T00:00:00.000Z"
+}
+```
+
+Respuesta esperada para `/api/health/ready`:
+
+```json
+{
+  "status": "ok",
+  "service": "auto-gmail-code-api",
+  "timestamp": "2026-06-16T00:00:00.000Z",
+  "checks": {
+    "database": {
+      "status": "ok",
+      "detail": "Prisma pudo consultar PostgreSQL."
+    },
+    "gmailOAuth": {
+      "status": "ok",
+      "detail": "OAuth Gmail configurado."
+    }
+  }
 }
 ```
