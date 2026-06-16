@@ -41,12 +41,12 @@ const parsedEnvironment = environmentSchema.parse(process.env);
 if (parsedEnvironment.NODE_ENV === "production") {
   const productionErrors: string[] = [];
 
-  if (parsedEnvironment.JWT_SECRET === defaultJwtSecret) {
-    productionErrors.push("JWT_SECRET no puede usar el valor por defecto en production.");
+  if (isUnsafeProductionSecret(parsedEnvironment.JWT_SECRET, defaultJwtSecret)) {
+    productionErrors.push("JWT_SECRET debe ser un secreto real de al menos 32 caracteres en production.");
   }
 
-  if (parsedEnvironment.TOKEN_ENCRYPTION_KEY === defaultTokenEncryptionKey) {
-    productionErrors.push("TOKEN_ENCRYPTION_KEY no puede usar el valor por defecto en production.");
+  if (isUnsafeProductionSecret(parsedEnvironment.TOKEN_ENCRYPTION_KEY, defaultTokenEncryptionKey)) {
+    productionErrors.push("TOKEN_ENCRYPTION_KEY debe ser un secreto real de al menos 32 caracteres en production.");
   }
 
   if (parsedEnvironment.PERSISTENCE_DRIVER !== "prisma") {
@@ -55,6 +55,14 @@ if (parsedEnvironment.NODE_ENV === "production") {
 
   if (!parsedEnvironment.DATABASE_URL) {
     productionErrors.push("DATABASE_URL es obligatorio en production.");
+  }
+
+  if (!parsedEnvironment.GOOGLE_CLIENT_ID || isPlaceholderValue(parsedEnvironment.GOOGLE_CLIENT_ID)) {
+    productionErrors.push("GOOGLE_CLIENT_ID es obligatorio en production.");
+  }
+
+  if (!parsedEnvironment.GOOGLE_CLIENT_SECRET || isPlaceholderValue(parsedEnvironment.GOOGLE_CLIENT_SECRET)) {
+    productionErrors.push("GOOGLE_CLIENT_SECRET es obligatorio en production.");
   }
 
   if (productionErrors.length > 0) {
@@ -95,3 +103,17 @@ export const environment = {
     attachmentMaxBytes: parsedEnvironment.GMAIL_ATTACHMENT_MAX_BYTES,
   },
 } as const;
+
+function isUnsafeProductionSecret(value: string, defaultValue: string): boolean {
+  return value === defaultValue || value.length < 32 || isPlaceholderValue(value);
+}
+
+function isPlaceholderValue(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.length === 0 ||
+    normalized.includes("change-me") ||
+    normalized.includes("replace-with") ||
+    normalized.includes("example")
+  );
+}

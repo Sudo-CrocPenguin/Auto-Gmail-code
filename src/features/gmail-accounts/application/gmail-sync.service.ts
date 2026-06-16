@@ -144,6 +144,9 @@ export class GmailSyncService {
       };
     } catch (error) {
       const failure = resolveGmailSyncFailure(error);
+      if (failure.reason === "TOKEN_REVOKED") {
+        await this.tokenVault.deleteCredentials(account.id);
+      }
       const updatedAccount = await this.gmailAccounts.update(account.id, {
         status: failure.accountStatus,
         errorMessage: failure.message,
@@ -165,6 +168,7 @@ export class GmailSyncService {
         metadata: {
           reason: failure.reason,
           message: failure.message,
+          credentialsDeleted: failure.reason === "TOKEN_REVOKED",
         },
         createdAt: new Date().toISOString(),
       });
@@ -176,6 +180,7 @@ export class GmailSyncService {
         metadata: {
           ...syncLog.metadata,
           reason: failure.reason,
+          credentialsDeleted: failure.reason === "TOKEN_REVOKED",
         },
       });
 

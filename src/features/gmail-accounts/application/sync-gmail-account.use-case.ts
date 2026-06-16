@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 
 import type { AuditLogRepository } from "../../audit/domain/audit-log.repository";
 import { assertOwnerOrAdmin } from "../../../shared/application/authorization";
+import { environment } from "../../../shared/config/environment";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
+import { AppError } from "../../../shared/domain/errors/app-error";
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccount } from "../domain/gmail-account.entity";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
@@ -25,9 +27,59 @@ export class SyncGmailAccountUseCase {
       throw new NotFoundError("La cuenta Gmail no existe.", "GMAIL_ACCOUNT_NOT_FOUND");
     }
 
+    if (account.status === "SYNCING") {
+      throw new AppError("La cuenta Gmail ya tiene una sincronizacion en curso.", 409, "GMAIL_SYNC_IN_PROGRESS");
+    }
+
     const syncResult = await this.gmailSyncService.syncAccount(context, account);
     if (syncResult) {
       return syncResult.account;
+    }
+
+    if (environment.persistenceDriver !== "memory") {
+      const now = new Date().toISOString();
+      await this.gmailAccounts.update(account.id, {
+        status: "RECONNECT_REQUIRED",
+        errorMessage: "La cuenta Gmail no tiene credenciales OAuth guardadas.",
+      });
+      await this.syncLogs.create({
+        id: randomUUID(),
+        workspaceId: context.workspaceId,
+        gmailAccountId: account.id,
+        status: "FAILED",
+        startedAt: now,
+        finishedAt: now,
+        fetchedMessages: 0,
+        createdMessages: 0,
+        updatedMessages: 0,
+        errorMessage: "La cuenta Gmail no tiene credenciales OAuth guardadas.",
+        metadata: {
+          mode: "real",
+          reason: "missing_oauth_credentials",
+          previousStatus: account.status,
+        },
+      });
+      await this.auditLogs.create({
+        id: randomUUID(),
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        action: "GMAIL_RECONNECT_REQUIRED",
+        entityType: "GmailAccount",
+        entityId: account.id,
+        description: `Cuenta ${account.emailAddress} requiere reconexion OAuth antes de sincronizar.`,
+        ip: null,
+        metadata: {
+          previousStatus: account.status,
+          reason: "missing_oauth_credentials",
+        },
+        createdAt: now,
+      });
+
+      throw new AppError(
+        "La cuenta Gmail requiere reconexion para sincronizar.",
+        409,
+        "GMAIL_RECONNECT_REQUIRED",
+      );
     }
 
     const startedAt = new Date().toISOString();

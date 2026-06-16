@@ -10,7 +10,7 @@ export const requestLoggerMiddleware: RequestHandler = (request, response, next)
     const metadata = {
       requestId: request.requestId,
       method: request.method,
-      path: request.originalUrl,
+      path: sanitizeRequestPath(request.originalUrl),
       statusCode: response.statusCode,
       durationMs,
       ip: request.ip,
@@ -34,3 +34,28 @@ export const requestLoggerMiddleware: RequestHandler = (request, response, next)
 
   next();
 };
+
+const sensitiveQueryParams = new Set([
+  "access_token",
+  "code",
+  "id_token",
+  "refresh_token",
+  "state",
+  "token",
+]);
+
+function sanitizeRequestPath(originalUrl: string): string {
+  const [path, query] = originalUrl.split("?", 2);
+  if (!query) {
+    return originalUrl;
+  }
+
+  const params = new URLSearchParams(query);
+  for (const key of params.keys()) {
+    if (sensitiveQueryParams.has(key.toLowerCase())) {
+      params.set(key, "[REDACTED]");
+    }
+  }
+
+  return `${path}?${params.toString()}`;
+}
