@@ -167,6 +167,13 @@ model EmailMessage {
   reviewedAt     DateTime?
   gmailUrl       String?
   classification Json?
+  classificationPrimaryCategory String?
+  classificationCategoryTags String[] @default([])
+  classificationImportanceScore Int?
+  classificationSpamScore Int?
+  classificationRiskScore Int?
+  classificationSecurityScore Int?
+  classificationActionRequired Boolean?
   actionHistory  Json
   workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   gmailAccount   GmailAccount @relation(fields: [gmailAccountId], references: [id], onDelete: Cascade)
@@ -176,6 +183,10 @@ model EmailMessage {
   @@index([workspaceId, receivedAt])
   @@index([workspaceId, fromEmail])
   @@index([workspaceId, fromDomain])
+  @@index([workspaceId, classificationPrimaryCategory])
+  @@index([workspaceId, classificationImportanceScore])
+  @@index([workspaceId, classificationRiskScore])
+  @@index([workspaceId, classificationSecurityScore])
   @@index([gmailAccountId])
   @@map("email_messages")
 }

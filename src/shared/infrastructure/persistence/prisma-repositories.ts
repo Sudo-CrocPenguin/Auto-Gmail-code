@@ -1,6 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 
-import { paginate } from "../../application/pagination";
 import type { Alert } from "../../../features/alerts/domain/alert.entity";
 import type { AlertQueryParams, AlertRepository } from "../../../features/alerts/domain/alert.repository";
 import type { AuditLog } from "../../../features/audit/domain/audit-log.entity";
@@ -52,10 +51,6 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 
 function fromJson<T>(value: Prisma.JsonValue, fallback: T): T {
   return (value ?? fallback) as T;
-}
-
-function includesInsensitive(value: string | null, search: string): boolean {
-  return value?.toLowerCase().includes(search.toLowerCase()) ?? false;
 }
 
 function mapUser(user: Prisma.UserGetPayload<object>): User {
@@ -642,6 +637,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
     );
 
     const data = this.toEmailPersistence(email);
+    const effectiveClassification = existingEmail?.classification ?? email.classification;
     const updateData: Prisma.EmailMessageUncheckedUpdateInput = {
       threadId: email.threadId,
       accountEmail: email.accountEmail,
@@ -661,7 +657,8 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       isSpam: email.isSpam,
       isImportant: email.isImportant,
       gmailUrl: email.gmailUrl,
-      classification: existingEmail?.classification ? toJson(existingEmail.classification) : toJson(email.classification),
+      classification: toJson(effectiveClassification),
+      ...toClassificationPersistence(effectiveClassification),
       reviewedAt: existingEmail?.reviewedAt ? toDate(existingEmail.reviewedAt) : toDate(email.reviewedAt),
       actionHistory:
         existingEmail && existingEmail.actionHistory.length > 0
@@ -716,59 +713,63 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
     if (params.gmailAccountId) where.gmailAccountId = params.gmailAccountId;
     if (params.fromEmail) where.fromEmail = params.fromEmail;
     if (params.fromDomain) where.fromDomain = params.fromDomain;
+    if (params.category) where.classificationCategoryTags = { has: params.category };
     if (params.isImportant !== undefined) where.isImportant = params.isImportant;
     if (params.isSpam !== undefined) where.isSpam = params.isSpam;
     if (params.hasAttachments !== undefined) where.hasAttachments = params.hasAttachments;
     if (params.isRead !== undefined) where.isRead = params.isRead;
+    if (params.actionRequired !== undefined) where.classificationActionRequired = params.actionRequired;
+    if (params.minImportanceScore !== undefined) where.classificationImportanceScore = { gte: params.minImportanceScore };
+    if (params.minRiskScore !== undefined) where.classificationRiskScore = { gte: params.minRiskScore };
+    if (params.minSecurityScore !== undefined) where.classificationSecurityScore = { gte: params.minSecurityScore };
     if (params.dateFrom || params.dateTo) {
       where.receivedAt = {};
       if (params.dateFrom) where.receivedAt.gte = new Date(params.dateFrom);
       if (params.dateTo) where.receivedAt.lte = new Date(params.dateTo);
     }
 
-    let emails = (await this.client.emailMessage.findMany({
-      where,
-      orderBy: { receivedAt: params.sortOrder ?? "desc" },
-    })).map(mapEmail);
-
     const search = params.search?.trim().toLowerCase();
     if (search) {
-      emails = emails.filter(
-        (email) =>
-          includesInsensitive(email.subject, search) ||
-          includesInsensitive(email.snippet, search) ||
-          includesInsensitive(email.bodyText, search) ||
-          includesInsensitive(email.fromEmail, search) ||
-          includesInsensitive(email.fromName, search) ||
-          includesInsensitive(email.fromDomain, search),
-      );
+      where.OR = [
+        { subject: { contains: search, mode: "insensitive" } },
+        { snippet: { contains: search, mode: "insensitive" } },
+        { bodyText: { contains: search, mode: "insensitive" } },
+        { fromEmail: { contains: search, mode: "insensitive" } },
+        { fromName: { contains: search, mode: "insensitive" } },
+        { fromDomain: { contains: search, mode: "insensitive" } },
+      ];
     }
-
-    emails = emails.filter((email) => {
-      const classification = email.classification;
-      if (params.category && classification?.primaryCategory !== params.category && !classification?.secondaryCategories.includes(params.category)) return false;
-      if (params.actionRequired !== undefined && classification?.actionRequired !== params.actionRequired) return false;
-      if (params.minImportanceScore !== undefined && (classification?.importanceScore ?? 0) < params.minImportanceScore) return false;
-      if (params.minRiskScore !== undefined && (classification?.riskScore ?? 0) < params.minRiskScore) return false;
-      if (params.minSecurityScore !== undefined && (classification?.securityScore ?? 0) < params.minSecurityScore) return false;
-      return true;
-    });
 
     const sortBy = params.sortBy ?? "receivedAt";
     const sortOrder = params.sortOrder ?? "desc";
-    emails = [...emails].sort((left, right) => {
-      const leftValue = resolveEmailSortValue(left, sortBy);
-      const rightValue = resolveEmailSortValue(right, sortBy);
-      const comparison = leftValue > rightValue ? 1 : leftValue < rightValue ? -1 : 0;
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+    const orderBy = resolveEmailOrderBy(sortBy, sortOrder);
+    const [emails, total] = await Promise.all([
+      this.client.emailMessage.findMany({
+        where,
+        orderBy,
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+      }),
+      this.client.emailMessage.count({ where }),
+    ]);
 
-    return paginate(emails, params);
+    return {
+      data: emails.map(mapEmail),
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / params.limit)),
+      },
+    };
   }
 
   public async update(id: string, data: Partial<EmailMessage>): Promise<EmailMessage | null> {
     const updateData: Prisma.EmailMessageUpdateInput = {};
-    if (data.classification !== undefined) updateData.classification = toJson(data.classification);
+    if (data.classification !== undefined) {
+      updateData.classification = toJson(data.classification);
+      Object.assign(updateData, toClassificationPersistence(data.classification));
+    }
     if (data.isImportant !== undefined) updateData.isImportant = data.isImportant;
     if (data.isSpam !== undefined) updateData.isSpam = data.isSpam;
     if (data.isRead !== undefined) updateData.isRead = data.isRead;
@@ -809,6 +810,7 @@ export class PrismaEmailMessageRepository implements EmailMessageRepository {
       reviewedAt: toDate(email.reviewedAt),
       gmailUrl: email.gmailUrl,
       classification: toJson(email.classification),
+      ...toClassificationPersistence(email.classification),
       actionHistory: toJson(email.actionHistory),
     };
   }
@@ -1069,12 +1071,46 @@ export class PrismaAuditLogRepository implements AuditLogRepository {
   }
 }
 
-function resolveEmailSortValue(
-  email: EmailMessage,
+function resolveEmailOrderBy(
   sortBy: NonNullable<EmailQueryParams["sortBy"]>,
-): number {
-  if (sortBy === "receivedAt") return new Date(email.receivedAt).getTime();
-  if (sortBy === "importanceScore") return email.classification?.importanceScore ?? 0;
-  if (sortBy === "riskScore") return email.classification?.riskScore ?? 0;
-  return email.classification?.securityScore ?? 0;
+  sortOrder: NonNullable<EmailQueryParams["sortOrder"]>,
+): Prisma.EmailMessageOrderByWithRelationInput[] {
+  if (sortBy === "importanceScore") {
+    return [{ classificationImportanceScore: sortOrder }, { receivedAt: "desc" }];
+  }
+
+  if (sortBy === "riskScore") {
+    return [{ classificationRiskScore: sortOrder }, { receivedAt: "desc" }];
+  }
+
+  if (sortBy === "securityScore") {
+    return [{ classificationSecurityScore: sortOrder }, { receivedAt: "desc" }];
+  }
+
+  return [{ receivedAt: sortOrder }];
+}
+
+function toClassificationPersistence(
+  classification: EmailClassification | null,
+): Pick<
+  Prisma.EmailMessageUncheckedCreateInput,
+  | "classificationPrimaryCategory"
+  | "classificationCategoryTags"
+  | "classificationImportanceScore"
+  | "classificationSpamScore"
+  | "classificationRiskScore"
+  | "classificationSecurityScore"
+  | "classificationActionRequired"
+> {
+  return {
+    classificationPrimaryCategory: classification?.primaryCategory ?? null,
+    classificationCategoryTags: classification
+      ? Array.from(new Set([classification.primaryCategory, ...classification.secondaryCategories]))
+      : [],
+    classificationImportanceScore: classification?.importanceScore ?? null,
+    classificationSpamScore: classification?.spamScore ?? null,
+    classificationRiskScore: classification?.riskScore ?? null,
+    classificationSecurityScore: classification?.securityScore ?? null,
+    classificationActionRequired: classification?.actionRequired ?? null,
+  };
 }
