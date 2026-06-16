@@ -235,6 +235,30 @@ p {
   width: 2.8rem;
 }
 
+.auth-mode {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-mode button {
+  align-items: center;
+  background: rgba(4, 8, 18, 0.72);
+  border: 1px solid rgba(126, 164, 183, 0.28);
+  color: var(--muted);
+  display: inline-flex;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 2.45rem;
+  padding: 0.45rem;
+}
+
+.auth-mode button[aria-selected="true"] {
+  border-color: rgba(51, 247, 255, 0.5);
+  box-shadow: var(--shadow-cyan);
+  color: #ffffff;
+}
+
 label {
   display: grid;
   gap: 0.45rem;
@@ -560,15 +584,23 @@ select:focus,
 }
 
 .toggle-strip label,
-.check-row {
+.check-row,
+.terms-row {
   align-items: center;
   display: flex;
   gap: 0.45rem;
 }
 
 .toggle-strip input,
-.check-row input {
+.check-row input,
+.terms-row input {
   accent-color: var(--green);
+}
+
+.terms-row {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
 }
 
 .bar-row {

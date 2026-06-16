@@ -1,24 +1,45 @@
-import { LockKeyhole, LogIn, Mail, Server } from "lucide-react";
+import { Building2, CheckCircle2, LockKeyhole, LogIn, Mail, Server, User, UserPlus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { NeonButton } from "../../../shared/presentation/components/neon-button";
-import type { LoginCredentials } from "../domain/auth-session.entity";
+import type { LoginCredentials, RegisterCredentials } from "../domain/auth-session.entity";
 
 interface LoginPanelProps {
   apiBaseUrl: string;
   error: string | null;
   isLoading: boolean;
   onLogin: (credentials: LoginCredentials) => Promise<void>;
+  onRegister: (credentials: RegisterCredentials) => Promise<void>;
 }
 
-export function LoginPanel({ apiBaseUrl, error, isLoading, onLogin }: LoginPanelProps) {
-  const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: "owner@autogmail.local",
-    password: "Password123!",
-  });
+type AuthMode = "login" | "register";
+
+const emptyLogin: LoginCredentials = {
+  email: "",
+  password: "",
+};
+
+const emptyRegister: RegisterCredentials = {
+  name: "",
+  email: "",
+  password: "",
+  workspaceName: "",
+  acceptTerms: false,
+};
+
+export function LoginPanel({ apiBaseUrl, error, isLoading, onLogin, onRegister }: LoginPanelProps) {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [credentials, setCredentials] = useState<LoginCredentials>(emptyLogin);
+  const [registration, setRegistration] = useState<RegisterCredentials>(emptyRegister);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (mode === "register") {
+      await onRegister(registration);
+      return;
+    }
+
     await onLogin(credentials);
   }
 
@@ -42,9 +63,61 @@ export function LoginPanel({ apiBaseUrl, error, isLoading, onLogin }: LoginPanel
           </span>
           <div>
             <p>Auto-Gmail Code</p>
-            <strong>Neon Control</strong>
+            <strong>{mode === "register" ? "Crear workspace" : "Neon Control"}</strong>
           </div>
         </div>
+
+        <div className="auth-mode" role="tablist" aria-label="Modo de autenticacion">
+          <button
+            aria-selected={mode === "login"}
+            onClick={() => setMode("login")}
+            role="tab"
+            type="button"
+          >
+            <LogIn size={16} />
+            Entrar
+          </button>
+          <button
+            aria-selected={mode === "register"}
+            onClick={() => setMode("register")}
+            role="tab"
+            type="button"
+          >
+            <UserPlus size={16} />
+            Crear cuenta
+          </button>
+        </div>
+
+        {mode === "register" ? (
+          <>
+            <label>
+              <span>Nombre</span>
+              <div className="input-shell">
+                <User size={18} />
+                <input
+                  autoComplete="name"
+                  required
+                  value={registration.name}
+                  onChange={(event) => setRegistration((current) => ({ ...current, name: event.target.value }))}
+                />
+              </div>
+            </label>
+
+            <label>
+              <span>Workspace</span>
+              <div className="input-shell">
+                <Building2 size={18} />
+                <input
+                  required
+                  value={registration.workspaceName}
+                  onChange={(event) =>
+                    setRegistration((current) => ({ ...current, workspaceName: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+          </>
+        ) : null}
 
         <label>
           <span>Email</span>
@@ -52,9 +125,14 @@ export function LoginPanel({ apiBaseUrl, error, isLoading, onLogin }: LoginPanel
             <Mail size={18} />
             <input
               autoComplete="email"
+              required
               type="email"
-              value={credentials.email}
-              onChange={(event) => setCredentials((current) => ({ ...current, email: event.target.value }))}
+              value={mode === "register" ? registration.email : credentials.email}
+              onChange={(event) => {
+                const email = event.target.value;
+                setCredentials((current) => ({ ...current, email }));
+                setRegistration((current) => ({ ...current, email }));
+              }}
             />
           </div>
         </label>
@@ -64,18 +142,42 @@ export function LoginPanel({ apiBaseUrl, error, isLoading, onLogin }: LoginPanel
           <div className="input-shell">
             <LockKeyhole size={18} />
             <input
-              autoComplete="current-password"
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
+              minLength={mode === "register" ? 8 : 1}
+              required
               type="password"
-              value={credentials.password}
-              onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
+              value={mode === "register" ? registration.password : credentials.password}
+              onChange={(event) => {
+                const password = event.target.value;
+                setCredentials((current) => ({ ...current, password }));
+                setRegistration((current) => ({ ...current, password }));
+              }}
             />
           </div>
         </label>
 
+        {mode === "register" ? (
+          <label className="terms-row">
+            <input
+              checked={registration.acceptTerms}
+              required
+              type="checkbox"
+              onChange={(event) =>
+                setRegistration((current) => ({ ...current, acceptTerms: event.target.checked }))
+              }
+            />
+            <span>Acepto los terminos del workspace</span>
+          </label>
+        ) : null}
+
         {error ? <p className="form-error">{error}</p> : null}
 
-        <NeonButton disabled={isLoading} icon={<LogIn size={18} />} type="submit">
-          {isLoading ? "Conectando" : "Entrar"}
+        <NeonButton
+          disabled={isLoading}
+          icon={mode === "register" ? <CheckCircle2 size={18} /> : <LogIn size={18} />}
+          type="submit"
+        >
+          {isLoading ? "Procesando" : mode === "register" ? "Crear y entrar" : "Entrar"}
         </NeonButton>
 
         <p className="api-target">{apiBaseUrl}</p>

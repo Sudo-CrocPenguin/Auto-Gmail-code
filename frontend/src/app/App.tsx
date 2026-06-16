@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-import type { AuthSession, LoginCredentials } from "../features/auth/domain/auth-session.entity";
+import type {
+  AuthSession,
+  LoginCredentials,
+  RegisterCredentials,
+} from "../features/auth/domain/auth-session.entity";
 import { LoginPanel } from "../features/auth/presentation/LoginPanel";
 import type { EmailDetail, EmailListQuery } from "../features/emails/domain/email-message.entity";
 import type { AutomationRule, CreateAutomationRuleInput } from "../features/rules/domain/automation-rule.entity";
@@ -59,6 +63,23 @@ export function App() {
       const nextSession = await services.loginUser.execute(credentials);
       services.tokenStorage.write(nextSession.accessToken);
       setSession(nextSession);
+      setOverview(await services.overview.load());
+    } catch (cause) {
+      setError(toMessage(cause));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleRegister(credentials: RegisterCredentials) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const nextSession = await services.registerUser.execute(credentials);
+      services.tokenStorage.write(nextSession.accessToken);
+      setSession(nextSession);
+      setActiveModule("gmail");
       setOverview(await services.overview.load());
     } catch (cause) {
       setError(toMessage(cause));
@@ -210,6 +231,7 @@ export function App() {
         error={error}
         isLoading={isLoading}
         onLogin={handleLogin}
+        onRegister={handleRegister}
       />
     );
   }

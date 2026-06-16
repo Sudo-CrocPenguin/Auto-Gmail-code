@@ -2,6 +2,7 @@ import { AlertApiRepository } from "../../features/alerts/infrastructure/alert-a
 import { AnalyticsApiRepository } from "../../features/analytics/infrastructure/analytics-api.repository";
 import { LoginUserUseCase } from "../../features/auth/application/login-user.use-case";
 import { LogoutUserUseCase } from "../../features/auth/application/logout-user.use-case";
+import { RegisterUserUseCase } from "../../features/auth/application/register-user.use-case";
 import { AuthApiRepository } from "../../features/auth/infrastructure/auth-api.repository";
 import { EmailApiRepository } from "../../features/emails/infrastructure/email-api.repository";
 import { GmailAccountApiRepository } from "../../features/gmail/infrastructure/gmail-account-api.repository";
@@ -21,6 +22,7 @@ export interface AppServices {
   loginUser: LoginUserUseCase;
   logoutUser: LogoutUserUseCase;
   overview: WorkspaceOverviewService;
+  registerUser: RegisterUserUseCase;
   ruleRepository: RuleApiRepository;
   tokenStorage: BrowserTokenStorage;
 }
@@ -52,6 +54,7 @@ export function createAppServices(): AppServices {
       ruleRepository,
       settingsRepository
     ),
+    registerUser: new RegisterUserUseCase(authRepository),
     ruleRepository,
     tokenStorage,
   };
