@@ -134,29 +134,40 @@ export class GmailSyncService {
         updatedMessages,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error desconocido en Gmail API.";
+      const failure = resolveGmailSyncFailure(error);
       const updatedAccount = await this.gmailAccounts.update(account.id, {
-        status: "ERROR",
-        errorMessage: message,
+        status: failure.accountStatus,
+        errorMessage: failure.message,
       });
+
+      if (failure.alert) {
+        await this.createOperationalAlertIfMissing(account, failure.alert);
+      }
 
       await this.auditLogs.create({
         id: randomUUID(),
         workspaceId: actor.workspaceId,
         userId: actor.userId,
-        action: "GMAIL_SYNC_FAILED",
+        action: failure.auditAction,
         entityType: "GmailAccount",
         entityId: account.id,
-        description: `Sincronizacion Gmail fallo para ${account.emailAddress}.`,
+        description: failure.auditDescription(account.emailAddress),
         ip: null,
-        metadata: { message },
+        metadata: {
+          reason: failure.reason,
+          message: failure.message,
+        },
         createdAt: new Date().toISOString(),
       });
 
       await this.syncLogs.update(syncLog.id, {
         status: "FAILED",
         finishedAt: new Date().toISOString(),
-        errorMessage: message,
+        errorMessage: failure.message,
+        metadata: {
+          ...syncLog.metadata,
+          reason: failure.reason,
+        },
       });
 
       return {
@@ -267,6 +278,48 @@ export class GmailSyncService {
     });
   }
 
+  private async createOperationalAlertIfMissing(
+    account: GmailAccount,
+    alert: {
+      type: "ACCOUNT_RECONNECT_REQUIRED" | "SYNC_ERROR";
+      severity: "MEDIUM" | "HIGH";
+      title: string;
+      description: string;
+      recommendedAction: string;
+    },
+  ): Promise<void> {
+    const existingAlerts = await this.alerts.findByWorkspace({
+      workspaceId: account.workspaceId,
+      status: "NEW",
+      type: alert.type,
+      page: 1,
+      limit: 100,
+    });
+
+    const alreadyOpen = existingAlerts.data.some(
+      (existingAlert) => existingAlert.gmailAccountId === account.id,
+    );
+
+    if (alreadyOpen) {
+      return;
+    }
+
+    await this.alerts.create({
+      id: randomUUID(),
+      workspaceId: account.workspaceId,
+      gmailAccountId: account.id,
+      emailMessageId: null,
+      type: alert.type,
+      severity: alert.severity,
+      title: alert.title,
+      description: alert.description,
+      status: "NEW",
+      recommendedAction: alert.recommendedAction,
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    });
+  }
+
   private async upsertSender(workspaceId: string, email: EmailMessage): Promise<void> {
     const existingSender = await this.senders.findByEmail(workspaceId, email.fromEmail);
     const classification = email.classification;
@@ -346,4 +399,127 @@ function resolveAlertType(
   if (spamScore >= 80 || category === "SPAM_PROBABLE") return "POSSIBLE_SPAM";
   if (category === "LEGAL") return "LEGAL_NOTICE";
   return "HIGH_IMPORTANCE";
+}
+
+interface GmailSyncFailure {
+  reason:
+    | "TOKEN_REVOKED"
+    | "RATE_LIMIT"
+    | "USER_RATE_LIMIT"
+    | "QUOTA_EXCEEDED"
+    | "HISTORY_NOT_FOUND"
+    | "UNKNOWN";
+  message: string;
+  accountStatus: GmailAccount["status"];
+  auditAction: string;
+  auditDescription: (emailAddress: string) => string;
+  alert?: {
+    type: "ACCOUNT_RECONNECT_REQUIRED" | "SYNC_ERROR";
+    severity: "MEDIUM" | "HIGH";
+    title: string;
+    description: string;
+    recommendedAction: string;
+  };
+}
+
+function resolveGmailSyncFailure(error: unknown): GmailSyncFailure {
+  const message = error instanceof Error ? error.message : "Error desconocido en Gmail API.";
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("invalid_grant") ||
+    normalizedMessage.includes("expired or revoked") ||
+    normalizedMessage.includes("token has been expired")
+  ) {
+    return {
+      reason: "TOKEN_REVOKED",
+      message,
+      accountStatus: "RECONNECT_REQUIRED",
+      auditAction: "GMAIL_RECONNECT_REQUIRED",
+      auditDescription: (emailAddress) => `Cuenta ${emailAddress} requiere reconexion OAuth.`,
+      alert: {
+        type: "ACCOUNT_RECONNECT_REQUIRED",
+        severity: "HIGH",
+        title: "Cuenta Gmail requiere reconexion",
+        description: "Google rechazo las credenciales OAuth guardadas para esta cuenta.",
+        recommendedAction: "Reconectar la cuenta Gmail desde el panel de cuentas.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("userratelimitexceeded")) {
+    return {
+      reason: "USER_RATE_LIMIT",
+      message,
+      accountStatus: "ERROR",
+      auditAction: "GMAIL_SYNC_RATE_LIMITED",
+      auditDescription: (emailAddress) => `Sincronizacion Gmail limitada por usuario para ${emailAddress}.`,
+      alert: {
+        type: "SYNC_ERROR",
+        severity: "MEDIUM",
+        title: "Gmail limito temporalmente la cuenta",
+        description: "Google aplico limite temporal a la cuenta durante la sincronizacion.",
+        recommendedAction: "Esperar unos minutos y reintentar la sincronizacion.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("ratelimitexceeded")) {
+    return {
+      reason: "RATE_LIMIT",
+      message,
+      accountStatus: "ERROR",
+      auditAction: "GMAIL_SYNC_RATE_LIMITED",
+      auditDescription: (emailAddress) => `Sincronizacion Gmail limitada por cuota para ${emailAddress}.`,
+      alert: {
+        type: "SYNC_ERROR",
+        severity: "MEDIUM",
+        title: "Gmail limito temporalmente la sincronizacion",
+        description: "Google aplico limite temporal durante la sincronizacion.",
+        recommendedAction: "Esperar unos minutos y reintentar la sincronizacion.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("quotaexceeded")) {
+    return {
+      reason: "QUOTA_EXCEEDED",
+      message,
+      accountStatus: "ERROR",
+      auditAction: "GMAIL_SYNC_QUOTA_EXCEEDED",
+      auditDescription: (emailAddress) => `Cuota Gmail agotada sincronizando ${emailAddress}.`,
+      alert: {
+        type: "SYNC_ERROR",
+        severity: "HIGH",
+        title: "Cuota Gmail agotada",
+        description: "La cuota disponible de Gmail API se agoto durante la sincronizacion.",
+        recommendedAction: "Revisar cuotas de Google Cloud y reintentar cuando haya disponibilidad.",
+      },
+    };
+  }
+
+  if (normalizedMessage.includes("notfound") || normalizedMessage.includes("history")) {
+    return {
+      reason: "HISTORY_NOT_FOUND",
+      message,
+      accountStatus: "ERROR",
+      auditAction: "GMAIL_HISTORY_NOT_FOUND",
+      auditDescription: (emailAddress) => `HistoryId Gmail no recuperable para ${emailAddress}.`,
+    };
+  }
+
+  return {
+    reason: "UNKNOWN",
+    message,
+    accountStatus: "ERROR",
+    auditAction: "GMAIL_SYNC_FAILED",
+    auditDescription: (emailAddress) => `Sincronizacion Gmail fallo para ${emailAddress}.`,
+    alert: {
+      type: "SYNC_ERROR",
+      severity: "MEDIUM",
+      title: "Fallo de sincronizacion Gmail",
+      description: "La sincronizacion fallo por un error no clasificado.",
+      recommendedAction: "Revisar el log de sincronizacion y reintentar.",
+    },
+  };
 }

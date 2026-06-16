@@ -63,12 +63,8 @@ Falta una prueba manual completa con Google Cloud:
 
 Cuando Gmail API rechace credenciales:
 
-- Detectar errores OAuth como `invalid_grant`.
-- Marcar cuenta como `RECONNECT_REQUIRED`.
-- Borrar access token vencido si aplica.
-- Mantener refresh token cifrado solo si sigue siendo recuperable.
-- Crear alerta `ACCOUNT_RECONNECT_REQUIRED`.
-- Registrar auditoria `GMAIL_TOKEN_REVOKED` o `GMAIL_RECONNECT_REQUIRED`.
+- Definir estrategia fina para limpiar access token vencido sin perder informacion recuperable.
+- Documentar el flujo operativo de reconexion para soporte.
 
 ### 4. Hardening de secretos
 
@@ -250,13 +246,11 @@ Agregar:
 
 ### 18. Manejo centralizado de errores Gmail API
 
-Agregar traductor de errores:
+Ya existe traduccion base para tokens revocados, rate limit, quota exceeded e historyId no recuperable. Falta completar comportamiento operativo:
 
-- `invalid_grant` => reconectar.
-- `rateLimitExceeded` => retry later.
-- `userRateLimitExceeded` => backoff por cuenta.
-- `quotaExceeded` => alerta operativa.
-- `notFound` en historyId => sync inicial de recuperacion.
+- Backoff real por cuenta ante `rateLimitExceeded` y `userRateLimitExceeded`.
+- Politica de reintentos automatica.
+- Exponer `retryAfter` recomendado en logs de sync cuando aplique.
 
 ## P2 - Mejoras importantes despues del front MVP
 
