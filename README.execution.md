@@ -66,8 +66,9 @@ Reglas:
 - No subir `.env` al repositorio.
 - Cambiar `JWT_SECRET` en cualquier ambiente que no sea demo local.
 - Cambiar `TOKEN_ENCRYPTION_KEY` antes de conectar cuentas Gmail reales.
-- En `production`, `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` no pueden usar valores por defecto.
+- En `production`, `JWT_SECRET` y `TOKEN_ENCRYPTION_KEY` no pueden ser placeholders y deben tener al menos 32 caracteres.
 - En `production`, `PERSISTENCE_DRIVER` debe ser `prisma` y `DATABASE_URL` es obligatorio.
+- En `production`, `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` son obligatorios para conectar Gmail real.
 - Usar `PERSISTENCE_DRIVER=prisma` si necesitas persistencia real.
 - Usar `PERSISTENCE_DRIVER=memory` solo para pruebas rapidas o tests.
 - Ajustar rate limits segun ambiente:
@@ -200,7 +201,7 @@ curl -X POST http://localhost:4000/api/gmail/oauth/start \
 6. Acepta permisos Gmail.
 7. Google vuelve a `/api/gmail/oauth/callback`.
 8. El backend:
-   - valida `state`,
+   - valida `state` firmado y lo consume una sola vez,
    - intercambia `code`,
    - obtiene perfil Gmail,
    - guarda tokens cifrados,
@@ -240,7 +241,7 @@ Uso recomendado:
 - Desarrollo sin DB: `npm run dev`.
 - Desarrollo con DB: `npm run db:migrate`, `npm run db:seed`, `npm run dev`.
 - Validacion antes de commit: `npm run check`.
-- Validacion Prisma con DB real: definir `PRISMA_TEST_DATABASE_URL` y ejecutar `npm run test:prisma`.
+- Validacion Prisma con DB real: definir `PRISMA_TEST_DATABASE_URL` y ejecutar `npm run test:prisma`. Incluye repositorios y endpoints HTTP con `PERSISTENCE_DRIVER=prisma`.
 - CI: `.github/workflows/backend-check.yml` ejecuta `npm ci`, `db:generate`, `npm run check`, migraciones, seed y `npm run test:prisma` con PostgreSQL.
 - Produccion: `npm run build`, `npm run db:deploy`, `npm start`.
 

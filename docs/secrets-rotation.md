@@ -27,14 +27,18 @@ Rotarlo invalida todos los JWT existentes. Procedimiento:
 
 Procedimiento seguro recomendado:
 
-1. Mantener la clave actual disponible como `TOKEN_ENCRYPTION_KEY_OLD`.
+1. Mantener la clave actual disponible como `OLD_TOKEN_ENCRYPTION_KEY`.
 2. Definir la nueva clave como `TOKEN_ENCRYPTION_KEY`.
-3. Ejecutar un script de re-cifrado que:
-   - lea cada fila de `gmail_oauth_tokens`,
-   - descifre con la clave anterior,
-   - cifre con la clave nueva,
-   - actualice `updatedAt`,
-   - registre conteos y errores sin imprimir tokens.
+3. Ejecutar el script de re-cifrado:
+
+```bash
+OLD_TOKEN_ENCRYPTION_KEY=<clave-anterior> \
+TOKEN_ENCRYPTION_KEY=<clave-nueva> \
+DATABASE_URL=<postgres-url> \
+npm run tokens:reencrypt
+```
+
+El script lee cada fila de `gmail_oauth_tokens`, descifra con la clave anterior, cifra con la clave nueva, actualiza `updatedAt` y solo imprime conteos.
 4. Ejecutar sync de prueba con una cuenta real.
 5. Retirar `TOKEN_ENCRYPTION_KEY_OLD`.
 
@@ -48,4 +52,4 @@ Procedimiento seguro recomendado:
 
 ## Estado Actual
 
-El backend bloquea `production` si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` usan valores por defecto. Falta implementar el script automatizado de re-cifrado.
+El backend bloquea `production` si `JWT_SECRET` o `TOKEN_ENCRYPTION_KEY` son placeholders o tienen menos de 32 caracteres. El re-cifrado de tokens Gmail esta implementado en `npm run tokens:reencrypt`.

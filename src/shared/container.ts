@@ -80,10 +80,12 @@ import { RateLimitMiddleware } from "./http/middlewares/rate-limit.middleware";
 import { createSeededInMemoryDatabase } from "./infrastructure/persistence/in-memory-database";
 import {
   InMemoryAlertRepository,
+  InMemoryAppSessionRepository,
   InMemoryAuditLogRepository,
   InMemoryAutomationRuleRepository,
   InMemoryEmailMessageRepository,
   InMemoryGmailAccountRepository,
+  InMemoryGmailOAuthStateRepository,
   InMemoryGmailOAuthTokenRepository,
   InMemoryGmailSyncLogRepository,
   InMemorySenderProfileRepository,
@@ -94,10 +96,12 @@ import {
 import { prisma } from "./infrastructure/persistence/prisma.client";
 import {
   PrismaAlertRepository,
+  PrismaAppSessionRepository,
   PrismaAuditLogRepository,
   PrismaAutomationRuleRepository,
   PrismaEmailMessageRepository,
   PrismaGmailAccountRepository,
+  PrismaGmailOAuthStateRepository,
   PrismaGmailOAuthTokenRepository,
   PrismaGmailSyncLogRepository,
   PrismaSenderProfileRepository,
@@ -128,9 +132,11 @@ export function buildContainer(): ApplicationContainer {
   const repositories = buildRepositories();
 
   const users = repositories.users;
+  const appSessions = repositories.appSessions;
   const workspaces = repositories.workspaces;
   const auditLogs = repositories.auditLogs;
   const gmailAccounts = repositories.gmailAccounts;
+  const gmailOAuthStates = repositories.gmailOAuthStates;
   const gmailOAuthTokens = repositories.gmailOAuthTokens;
   const gmailSyncLogs = repositories.gmailSyncLogs;
   const emails = repositories.emails;
@@ -156,7 +162,7 @@ export function buildContainer(): ApplicationContainer {
     googleGmailClient,
     automationRuleEngine,
   );
-  const authMiddleware = new AuthMiddleware(jwtService);
+  const authMiddleware = new AuthMiddleware(jwtService, appSessions);
   const authRateLimit = new RateLimitMiddleware({
     ...environment.rateLimit.auth,
     keyPrefix: "auth",
@@ -174,9 +180,11 @@ export function buildContainer(): ApplicationContainer {
 
   return composeApplication({
     users,
+    appSessions,
     workspaces,
     auditLogs,
     gmailAccounts,
+    gmailOAuthStates,
     gmailSyncLogs,
     emails,
     alerts,
@@ -203,9 +211,11 @@ function buildRepositories() {
 
     return {
       users: new PrismaUserRepository(prisma),
+      appSessions: new PrismaAppSessionRepository(prisma),
       workspaces: new PrismaWorkspaceRepository(prisma),
       auditLogs: new PrismaAuditLogRepository(prisma),
       gmailAccounts: new PrismaGmailAccountRepository(prisma),
+      gmailOAuthStates: new PrismaGmailOAuthStateRepository(prisma),
       gmailOAuthTokens: new PrismaGmailOAuthTokenRepository(prisma),
       gmailSyncLogs: new PrismaGmailSyncLogRepository(prisma),
       emails: new PrismaEmailMessageRepository(prisma),
@@ -220,9 +230,11 @@ function buildRepositories() {
 
   return {
     users: new InMemoryUserRepository(database),
+    appSessions: new InMemoryAppSessionRepository(database),
     workspaces: new InMemoryWorkspaceRepository(database),
     auditLogs: new InMemoryAuditLogRepository(database),
     gmailAccounts: new InMemoryGmailAccountRepository(database),
+    gmailOAuthStates: new InMemoryGmailOAuthStateRepository(database),
     gmailOAuthTokens: new InMemoryGmailOAuthTokenRepository(database),
     gmailSyncLogs: new InMemoryGmailSyncLogRepository(database),
     emails: new InMemoryEmailMessageRepository(database),
@@ -235,9 +247,11 @@ function buildRepositories() {
 
 interface ComposedApplicationDependencies {
   users: InMemoryUserRepository | PrismaUserRepository;
+  appSessions: InMemoryAppSessionRepository | PrismaAppSessionRepository;
   workspaces: InMemoryWorkspaceRepository | PrismaWorkspaceRepository;
   auditLogs: InMemoryAuditLogRepository | PrismaAuditLogRepository;
   gmailAccounts: InMemoryGmailAccountRepository | PrismaGmailAccountRepository;
+  gmailOAuthStates: InMemoryGmailOAuthStateRepository | PrismaGmailOAuthStateRepository;
   gmailSyncLogs: InMemoryGmailSyncLogRepository | PrismaGmailSyncLogRepository;
   emails: InMemoryEmailMessageRepository | PrismaEmailMessageRepository;
   alerts: InMemoryAlertRepository | PrismaAlertRepository;
@@ -257,11 +271,23 @@ interface ComposedApplicationDependencies {
 
 function composeApplication(dependencies: ComposedApplicationDependencies): ApplicationContainer {
   const authController = new AuthController(
-    new RegisterUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
-    new LoginUserUseCase(dependencies.users, dependencies.workspaces, dependencies.auditLogs, dependencies.jwtService),
+    new RegisterUserUseCase(
+      dependencies.users,
+      dependencies.workspaces,
+      dependencies.appSessions,
+      dependencies.auditLogs,
+      dependencies.jwtService,
+    ),
+    new LoginUserUseCase(
+      dependencies.users,
+      dependencies.workspaces,
+      dependencies.appSessions,
+      dependencies.auditLogs,
+      dependencies.jwtService,
+    ),
     new GetAuthenticatedUserUseCase(dependencies.users, dependencies.workspaces),
-    new LogoutUserUseCase(dependencies.auditLogs),
-    new ChangePasswordUseCase(dependencies.users, dependencies.auditLogs),
+    new LogoutUserUseCase(dependencies.appSessions, dependencies.auditLogs),
+    new ChangePasswordUseCase(dependencies.users, dependencies.appSessions, dependencies.auditLogs),
   );
   const userController = new UserController(
     new UpdateCurrentUserProfileUseCase(dependencies.users, dependencies.auditLogs),
@@ -276,6 +302,7 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new ListGmailAccountsUseCase(dependencies.gmailAccounts),
     new StartGmailOAuthUseCase(
       dependencies.auditLogs,
+      dependencies.gmailOAuthStates,
       dependencies.googleGmailClient,
       dependencies.oauthStateService,
     ),
@@ -283,6 +310,7 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new HandleGmailOAuthCallbackUseCase(
       dependencies.auditLogs,
       dependencies.gmailAccounts,
+      dependencies.gmailOAuthStates,
       dependencies.gmailTokenVault,
       dependencies.googleGmailClient,
       dependencies.gmailSyncService,
@@ -297,6 +325,7 @@ function composeApplication(dependencies: ComposedApplicationDependencies): Appl
     new ReconnectGmailAccountUseCase(
       dependencies.gmailAccounts,
       dependencies.auditLogs,
+      dependencies.gmailOAuthStates,
       dependencies.googleGmailClient,
       dependencies.oauthStateService,
     ),

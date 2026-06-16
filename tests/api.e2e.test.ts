@@ -47,6 +47,24 @@ describe("Auto-Gmail-code API", () => {
     expect(response.body.workspace.name).toBe("Auto-Gmail-code Demo");
   });
 
+  it("invalida la sesion al cerrar sesion", async () => {
+    const token = await login();
+
+    const logout = await request(app)
+      .post("/api/auth/logout")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(logout.status).toBe(200);
+    expect(logout.body.success).toBe(true);
+
+    const me = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(me.status).toBe(401);
+    expect(me.body.error.code).toBe("UNAUTHORIZED");
+  });
+
   it("actualiza perfil y permite cambiar password del usuario autenticado", async () => {
     const suffix = randomUUID();
     const email = `perfil-${suffix}@autogmail.local`;
@@ -114,6 +132,13 @@ describe("Auto-Gmail-code API", () => {
 
     expect(callback.status).toBe(302);
     expect(callback.headers.location).toContain("oauth=success");
+
+    const replay = await request(app).get(
+      `/api/gmail/oauth/callback?code=demo-code&state=${oauth.body.data.state as string}`,
+    );
+
+    expect(replay.status).toBe(302);
+    expect(replay.headers.location).toContain("oauth=error");
   });
 
   it("sincroniza una cuenta Gmail y expone logs de sincronizacion", async () => {

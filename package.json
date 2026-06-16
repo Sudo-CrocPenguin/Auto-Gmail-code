@@ -8,12 +8,13 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "test": "vitest run",
-    "test:prisma": "vitest run tests/prisma.integration.test.ts",
+    "test:prisma": "vitest run tests/prisma.integration.test.ts tests/prisma-http.e2e.test.ts",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "tokens:reencrypt": "tsx scripts/reencrypt-gmail-tokens.ts",
     "check": "npm run build && npm run test"
   },
   "keywords": [

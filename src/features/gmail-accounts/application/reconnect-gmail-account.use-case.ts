@@ -6,6 +6,7 @@ import { environment } from "../../../shared/config/environment";
 import type { AuthenticatedContext } from "../../../shared/domain/authenticated-context";
 import { NotFoundError } from "../../../shared/domain/errors/not-found-error";
 import type { GmailAccountRepository } from "../domain/gmail-account.repository";
+import type { GmailOAuthStateRepository } from "../domain/gmail-oauth-state.repository";
 import { GoogleGmailClient } from "../infrastructure/google-gmail.client";
 import { OAuthStateService } from "./oauth-state.service";
 
@@ -13,6 +14,7 @@ export class ReconnectGmailAccountUseCase {
   public constructor(
     private readonly gmailAccounts: GmailAccountRepository,
     private readonly auditLogs: AuditLogRepository,
+    private readonly oauthStates: GmailOAuthStateRepository,
     private readonly gmailClient: GoogleGmailClient,
     private readonly oauthStateService: OAuthStateService,
   ) {}
@@ -26,11 +28,25 @@ export class ReconnectGmailAccountUseCase {
     }
 
     const configured = Boolean(environment.google.clientId && environment.google.clientSecret);
+    const nonce = randomUUID();
+    const now = new Date();
     const state = this.oauthStateService.sign({
       workspaceId: context.workspaceId,
       userId: context.userId,
       accountId,
-      nonce: randomUUID(),
+      nonce,
+    });
+    await this.oauthStates.deleteExpired(now.toISOString());
+    await this.oauthStates.create({
+      id: randomUUID(),
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+      accountId,
+      nonce,
+      stateHash: this.oauthStateService.hash(state),
+      createdAt: now.toISOString(),
+      expiresAt: this.oauthStateService.expiresAt(now),
+      consumedAt: null,
     });
 
     const authUrl = configured

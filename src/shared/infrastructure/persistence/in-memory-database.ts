@@ -2,9 +2,11 @@ import { hashSync } from "bcryptjs";
 
 import type { Alert } from "../../../features/alerts/domain/alert.entity";
 import type { AuditLog } from "../../../features/audit/domain/audit-log.entity";
+import type { AppSession } from "../../../features/auth/domain/app-session.entity";
 import type { User } from "../../../features/auth/domain/user.entity";
 import type { EmailMessage } from "../../../features/emails/domain/email-message.entity";
 import type { GmailAccount } from "../../../features/gmail-accounts/domain/gmail-account.entity";
+import type { StoredGmailOAuthState } from "../../../features/gmail-accounts/domain/gmail-oauth-state.entity";
 import type { GmailOAuthToken } from "../../../features/gmail-accounts/domain/gmail-oauth-token.entity";
 import type { GmailSyncLog } from "../../../features/gmail-accounts/domain/gmail-sync-log.entity";
 import type { AutomationRule } from "../../../features/rules/domain/automation-rule.entity";
@@ -14,9 +16,11 @@ import type { Workspace } from "../../../features/workspace/domain/workspace.ent
 
 export interface InMemoryDatabase {
   users: User[];
+  appSessions: AppSession[];
   workspaces: Workspace[];
   workspaceSettings: Record<string, WorkspaceSettings>;
   gmailAccounts: GmailAccount[];
+  gmailOAuthStates: StoredGmailOAuthState[];
   gmailOAuthTokens: GmailOAuthToken[];
   gmailSyncLogs: GmailSyncLog[];
   emails: EmailMessage[];
@@ -48,6 +52,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         createdAt: "2026-06-01T08:00:00.000Z",
       },
     ],
+    appSessions: [],
     workspaces: [
       {
         id: workspaceId,
@@ -102,6 +107,7 @@ export function createSeededInMemoryDatabase(): InMemoryDatabase {
         createdAt: "2026-06-05T14:45:00.000Z",
       },
     ],
+    gmailOAuthStates: [],
     gmailOAuthTokens: [],
     gmailSyncLogs: [
       {

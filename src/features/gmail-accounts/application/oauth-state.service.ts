@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 
@@ -14,6 +16,8 @@ const oauthStatePayloadSchema = z.object({
 export type GmailOAuthState = z.infer<typeof oauthStatePayloadSchema>;
 
 export class OAuthStateService {
+  private readonly ttlMs = 10 * 60 * 1000;
+
   public sign(payload: GmailOAuthState): string {
     return jwt.sign(payload, environment.jwtSecret, {
       expiresIn: "10m",
@@ -37,5 +41,12 @@ export class OAuthStateService {
       throw new AppError("El state OAuth no es valido o expiro.", 400, "OAUTH_STATE_INVALID");
     }
   }
-}
 
+  public hash(state: string): string {
+    return createHash("sha256").update(state).digest("hex");
+  }
+
+  public expiresAt(from: Date = new Date()): string {
+    return new Date(from.getTime() + this.ttlMs).toISOString();
+  }
+}

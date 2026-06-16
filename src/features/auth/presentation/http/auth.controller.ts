@@ -20,7 +20,11 @@ export class AuthController {
 
   public readonly register: RequestHandler = asyncHandler(async (request, response) => {
     const input = registerUserDto.parse(request.body);
-    const result = await this.registerUser.execute(input);
+    const result = await this.registerUser.execute({
+      ...input,
+      ip: request.ip ?? null,
+      userAgent: request.headers["user-agent"] ?? null,
+    });
     response.status(201).json(result);
   });
 
@@ -29,6 +33,7 @@ export class AuthController {
     const result = await this.loginUser.execute({
       ...input,
       ip: request.ip ?? null,
+      userAgent: request.headers["user-agent"] ?? null,
     });
     response.json(result);
   });

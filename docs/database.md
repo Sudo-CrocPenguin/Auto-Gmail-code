@@ -6,9 +6,9 @@ La primera version robusta del backend soporta PostgreSQL usando Prisma. La pers
 
 ## Para que sirve
 
-Permite conservar usuarios, workspaces, tokens Gmail cifrados, cuentas conectadas, correos sincronizados, alertas, remitentes, reglas, settings y auditoria aunque el servidor se reinicie.
+Permite conservar usuarios, sesiones, workspaces, states OAuth de un solo uso, tokens Gmail cifrados, cuentas conectadas, correos sincronizados, alertas, remitentes, reglas, settings y auditoria aunque el servidor se reinicie.
 
-Los correos guardan `bodyHtml` y `bodyText` por separado. `bodyHtml` se sanitiza al responder detalle de correo; `bodyText` sirve como fallback legible y como base de busqueda sin depender del HTML.
+Los correos guardan `bodyHtml` y `bodyText` por separado. `bodyHtml` se sanitiza al responder detalle de correo; `bodyText` sirve como fallback legible y como base de busqueda sin depender del HTML. La clasificacion tambien se desnormaliza en columnas consultables para filtrar y ordenar desde PostgreSQL sin cargar toda la bandeja en memoria.
 
 ## Como funciona
 
@@ -57,6 +57,16 @@ prisma/migrations/20260616172000_add_email_body_text/migration.sql
 
 El campo `email_messages.bodyText` separa el texto plano del HTML para busqueda, accesibilidad y fallback de renderizado.
 
+Las migraciones de seguridad y busqueda productiva son:
+
+```txt
+prisma/migrations/20260616193000_add_app_sessions/migration.sql
+prisma/migrations/20260616194000_add_gmail_oauth_states/migration.sql
+prisma/migrations/20260616195000_denormalize_email_classification/migration.sql
+```
+
+`app_sessions` permite revocar JWT por logout o cambio de password. `gmail_oauth_states` evita reuso de callbacks OAuth. Las columnas `classification*` en `email_messages` soportan filtros por categoria, accion requerida y scores, mas ordenamientos por importancia, riesgo y seguridad.
+
 Para entornos productivos:
 
 ```bash
@@ -65,11 +75,11 @@ npm run db:deploy
 
 ## Tests Prisma
 
-Existe una suite dedicada para validar repositorios Prisma contra una base real. No se ejecuta dentro de `npm test`; se invoca de forma explicita cuando existe una base de pruebas disponible.
+Existe una suite dedicada para validar repositorios Prisma y endpoints HTTP contra una base real. No se ejecuta dentro de `npm test`; se invoca de forma explicita cuando existe una base de pruebas disponible.
 
 ```bash
 PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run db:deploy
 PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run test:prisma
 ```
 
-La base debe estar creada antes de ejecutar la suite. Esta prueba cubre persistencia de workspace, usuario, settings, cuenta Gmail, token OAuth, logs de sync, reglas, auditoria y actualizacion de usuario.
+La base debe estar creada antes de ejecutar la suite. Esta prueba cubre persistencia de workspace, usuario, sesiones, settings, cuenta Gmail, token OAuth, logs de sync, reglas, auditoria, actualizacion de usuario, OAuth state de un uso y comportamiento HTTP Prisma ante cuentas sin credenciales OAuth.

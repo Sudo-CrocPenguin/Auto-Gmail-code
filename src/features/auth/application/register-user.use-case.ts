@@ -6,6 +6,8 @@ import type { WorkspaceRepository } from "../../workspace/domain/workspace.repos
 import type { Workspace } from "../../workspace/domain/workspace.entity";
 import { AppError } from "../../../shared/domain/errors/app-error";
 import { JwtService } from "../../../shared/infrastructure/security/jwt.service";
+import { resolveSessionExpiresAt } from "./session-expiration";
+import type { AppSessionRepository } from "../domain/app-session.repository";
 import type { PublicUser, User } from "../domain/user.entity";
 import { toPublicUser } from "../domain/user.entity";
 import type { UserRepository } from "../domain/user.repository";
@@ -15,6 +17,8 @@ export interface RegisterUserInput {
   email: string;
   password: string;
   workspaceName: string;
+  ip: string | null;
+  userAgent: string | null;
 }
 
 export interface RegisterUserOutput {
@@ -27,6 +31,7 @@ export class RegisterUserUseCase {
   public constructor(
     private readonly users: UserRepository,
     private readonly workspaces: WorkspaceRepository,
+    private readonly appSessions: AppSessionRepository,
     private readonly auditLogs: AuditLogRepository,
     private readonly jwtService: JwtService,
   ) {}
@@ -40,6 +45,7 @@ export class RegisterUserUseCase {
     const now = new Date().toISOString();
     const workspaceId = randomUUID();
     const userId = randomUUID();
+    const sessionId = randomUUID();
 
     const user: User = {
       id: userId,
@@ -59,8 +65,20 @@ export class RegisterUserUseCase {
       createdAt: now,
     };
 
-    await this.users.create(user);
     await this.workspaces.create(workspace);
+    await this.users.create(user);
+    await this.appSessions.create({
+      id: sessionId,
+      workspaceId,
+      userId,
+      role: user.role,
+      createdAt: now,
+      expiresAt: resolveSessionExpiresAt(new Date(now)),
+      revokedAt: null,
+      lastUsedAt: null,
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
 
     await this.auditLogs.create({
       id: randomUUID(),
@@ -77,6 +95,7 @@ export class RegisterUserUseCase {
 
     return {
       accessToken: this.jwtService.sign({
+        sessionId,
         userId,
         workspaceId,
         role: user.role,
@@ -86,4 +105,3 @@ export class RegisterUserUseCase {
     };
   }
 }
-
