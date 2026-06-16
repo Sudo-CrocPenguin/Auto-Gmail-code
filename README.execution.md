@@ -226,6 +226,7 @@ npm run dev
 npm run build
 npm start
 npm test
+npm run test:prisma
 npm run check
 npm run db:generate
 npm run db:migrate
@@ -238,6 +239,7 @@ Uso recomendado:
 - Desarrollo sin DB: `npm run dev`.
 - Desarrollo con DB: `npm run db:migrate`, `npm run db:seed`, `npm run dev`.
 - Validacion antes de commit: `npm run check`.
+- Validacion Prisma con DB real: definir `PRISMA_TEST_DATABASE_URL` y ejecutar `npm run test:prisma`.
 - Produccion: `npm run build`, `npm run db:deploy`, `npm start`.
 
 ## 9. Endpoints de verificacion

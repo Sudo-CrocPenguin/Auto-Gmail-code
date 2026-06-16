@@ -52,3 +52,14 @@ Para entornos productivos:
 ```bash
 npm run db:deploy
 ```
+
+## Tests Prisma
+
+Existe una suite dedicada para validar repositorios Prisma contra una base real. No se ejecuta dentro de `npm test`; se invoca de forma explicita cuando existe una base de pruebas disponible.
+
+```bash
+PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run db:deploy
+PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code_test?schema=public npm run test:prisma
+```
+
+La base debe estar creada antes de ejecutar la suite. Esta prueba cubre persistencia de workspace, usuario, settings, cuenta Gmail, token OAuth, logs de sync, reglas y auditoria.

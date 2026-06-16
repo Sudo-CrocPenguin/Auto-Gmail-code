@@ -88,15 +88,9 @@ El contrato ya incluye schemas principales, errores estandar, paginacion, reques
 
 Los tests actuales usan memoria. Falta suite con DB:
 
-- Crear DB de test.
-- Ejecutar migraciones en test.
-- Limpiar datos entre pruebas.
-- Probar registro/login contra Prisma.
-- Probar settings contra Prisma.
-- Probar reglas contra Prisma.
-- Probar correccion de clasificacion persistida.
-- Probar auditoria persistida.
-- Probar desconexion Gmail eliminando tokens.
+- Automatizar creacion y limpieza de DB de test.
+- Agregar casos HTTP completos ejecutando `PERSISTENCE_DRIVER=prisma`.
+- Probar desconexion Gmail eliminando tokens desde endpoint HTTP.
 
 ### 7. Gmail sync mas completo
 

@@ -52,6 +52,12 @@ Verificar healthcheck:
 curl http://localhost:4000/api/health
 ```
 
+Ejecutar suite Prisma contra la base de Compose:
+
+```bash
+PRISMA_TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/auto_gmail_code?schema=public npm run test:prisma
+```
+
 ## Despliegue sin Docker
 
 Instalar dependencias y generar cliente Prisma:
